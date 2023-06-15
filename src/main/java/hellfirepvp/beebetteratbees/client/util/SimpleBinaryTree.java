@@ -25,14 +25,17 @@ public class SimpleBinaryTree<E> {
     }
 
     private Node<E> buildSubTree(E superNodeValue, int maxFollowingDepth) {
+        if (maxFollowingDepth <= 0) {
+            return new Leaf<>(superNodeValue);
+        }
         E[] subNodes = rootProvider.provideSubNodes(superNodeValue);
-        if(subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
-            return new Leaf<E>(superNodeValue);
+        if(subNodes == null || subNodes.length == 0) {
+            return new Leaf<>(superNodeValue);
         } else {
             Node<E> left = buildSubTree(subNodes[0], maxFollowingDepth - 1);
             Node<E> right = buildSubTree(subNodes[1], maxFollowingDepth - 1);
             int depth = Math.max(left.getMaxFollowingDepth(), right.getMaxFollowingDepth());
-            return new Node<E>(superNodeValue, left, right, depth + 1);
+            return new Node<>(superNodeValue, left, right, depth + 1);
         }
     }
 

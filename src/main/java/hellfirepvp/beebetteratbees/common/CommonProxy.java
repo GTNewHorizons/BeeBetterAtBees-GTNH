@@ -1,13 +1,11 @@
 package hellfirepvp.beebetteratbees.common;
 
 /**
- * HellFirePvP@Admin
- * Date: 28.04.2016 / 19:51
- * on BeeBetterAtBees
- * CommonProxy
+ * This class is part of the BeeBetterAtBees Mod
+ * Class: CommonProxy
+ * Created by HellFirePvP
+ * Date: 10.10.2018 / 23:12
  */
 public class CommonProxy {
-
-    public void registerNEIGUIs() {}
 
 }
