@@ -26,17 +26,4 @@ public class NEIBBABConfig implements IConfigureNEI {
     public String getVersion() {
         return BeeBetterAtBees.VERSION;
     }
-
-    /*
-
-    Are you FOR REAL NEI?!?!
-    The class has to be called NEI_SOMETHING_Config ?!? WTF?
-
-    ClassDiscoverer classDiscoverer = new ClassDiscoverer(new IStringMatcher() {
-      public boolean matches(String test) {
-        return (test.startsWith("NEI")) && (test.endsWith("Config.class"));
-      }
-    }, new Class[] { IConfigureNEI.class });
-     */
-
 }

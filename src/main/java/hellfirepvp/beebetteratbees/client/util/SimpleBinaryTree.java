@@ -26,7 +26,7 @@ public class SimpleBinaryTree<E> {
 
     private Node<E> buildSubTree(E superNodeValue, int maxFollowingDepth) {
         E[] subNodes = rootProvider.provideSubNodes(superNodeValue);
-        if(subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
+        if (subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
             return new Leaf<E>(superNodeValue);
         } else {
             Node<E> left = buildSubTree(subNodes[0], maxFollowingDepth - 1);
@@ -40,7 +40,7 @@ public class SimpleBinaryTree<E> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SimpleBinaryTree that = (SimpleBinaryTree) o;
+        SimpleBinaryTree<?> that = (SimpleBinaryTree<?>) o;
         return !(root != null ? !root.equals(that.root) : that.root != null);
     }
 
@@ -88,7 +88,7 @@ public class SimpleBinaryTree<E> {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            Node node = (Node) o;
+            Node<?> node = (Node<?>) o;
             return !(value != null ? !value.equals(node.value) : node.value != null);
         }
 
@@ -99,9 +99,14 @@ public class SimpleBinaryTree<E> {
 
         @Override
         public String toString() {
-            return new StringBuilder().append("[").append(left.toString())
-                    .append("], ").append(value.toString()).append(", [")
-                    .append(right.toString()).append("]").toString();
+            return new StringBuilder().append("[")
+                .append(left.toString())
+                .append("], ")
+                .append(value.toString())
+                .append(", [")
+                .append(right.toString())
+                .append("]")
+                .toString();
         }
 
         public void removeDuplicate() {

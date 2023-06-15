@@ -1,5 +1,26 @@
 package hellfirepvp.beebetteratbees.client.gui;
 
+import java.awt.Color;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
+
+import org.lwjgl.opengl.GL11;
+
 import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiRecipe;
@@ -13,23 +34,6 @@ import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.ISpeciesRoot;
 import hellfirepvp.beebetteratbees.common.BeeBetterAtBees;
 import hellfirepvp.beebetteratbees.common.ModConfig;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
-import org.lwjgl.opengl.GL11;
-
-import java.awt.*;
-import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * HellFirePvP@Admin
@@ -45,10 +49,10 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     private static IBeeRoot speciesRoot;
 
     public static List<IBeeMutation> getMutationsWithResult(IAllele allele) {
-        if(speciesRoot == null) return new LinkedList<IBeeMutation>();
+        if (speciesRoot == null) return new LinkedList<IBeeMutation>();
         LinkedList<IBeeMutation> out = new LinkedList<IBeeMutation>();
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
-            if(mutation.getTemplate()[0].equals(allele)) out.add(mutation);
+            if (mutation.getTemplate()[0].equals(allele)) out.add(mutation);
         }
         return out;
     }
@@ -71,7 +75,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public void loadCraftingRecipes(String outputId, Object... results) {
-        if(speciesRoot == null) return;
+        if (speciesRoot == null) return;
 
         if (outputId.equals("item")) {
             loadCraftingRecipes((ItemStack) results[0]);
@@ -79,7 +83,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     public void loadCraftingRecipes(ItemStack result) {
-        if(speciesRoot == null) return;
+        if (speciesRoot == null) return;
 
         if (!speciesRoot.isMember(result)) {
             return;
@@ -93,14 +97,16 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
             BeeBetterAtBees.log.warn("Genome is null when searching recipe for %s", result.toString());
             return;
         }
-        if (resultIndividual.getGenome().getPrimary() == null) {
+        if (resultIndividual.getGenome()
+            .getPrimary() == null) {
             BeeBetterAtBees.log.warn("Species is null when searching recipe for %s", result.toString());
             return;
         }
-        IAlleleSpecies species = resultIndividual.getGenome().getPrimary();
+        IAlleleSpecies species = resultIndividual.getGenome()
+            .getPrimary();
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
-            if(mutation.getTemplate()[0].equals(species)) {
-                if(!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
+            if (mutation.getTemplate()[0].equals(species)) {
+                if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
                     this.arecipes.add(new CachedBeeMutationTree(mutation));
                 }
             }
@@ -113,7 +119,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     @Override
     public void drawExtras(int recipe) {
         CachedRecipe rec = this.arecipes.get(recipe);
-        if(rec instanceof CachedBeeMutationTree) {
+        if (rec instanceof CachedBeeMutationTree) {
             Map<Rectangle, Collection<String>> boxes = new HashMap<Rectangle, Collection<String>>(4);
             CachedBeeMutationTree.PositionedMutationNodeStack root = ((CachedBeeMutationTree) rec).getRootStack();
             drawExtrasFrom(root, boxes);
@@ -121,59 +127,60 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         }
     }
 
-    private static final Color lineColorBlack = new Color(0, 0, 0),
-            lineColorRed = new Color(169, 0, 10);
+    private static final Color lineColorBlack = new Color(0, 0, 0), lineColorRed = new Color(169, 0, 10);
 
     private static final int offsetCorrection = 8;
     private static final int possibleChildOffset = 16;
 
-    public static void drawExtrasFrom(CachedBeeMutationTree.PositionedMutationNodeStack nodeStack, Map<Rectangle, Collection<String>> infoBoxes) {
+    public static void drawExtrasFrom(CachedBeeMutationTree.PositionedMutationNodeStack nodeStack,
+        Map<Rectangle, Collection<String>> infoBoxes) {
         int nodeX = nodeStack.relx;
         int nodeY = nodeStack.rely;
 
-        if(nodeStack.leftChild == null ||
-                nodeStack.rightChild == null) {
-            if(nodeStack.hasPossibleChildren) {
+        if (nodeStack.leftChild == null || nodeStack.rightChild == null) {
+            if (nodeStack.hasPossibleChildren) {
 
                 Color drawColor = lineColorBlack;
 
-                if(nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+                if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
                     drawColor = lineColorRed;
                 }
 
                 float chance = nodeStack.baseChance;
-                if(chance > 0) {
+                if (chance > 0) {
                     int length = drawChanceInfo(nodeX, nodeY, chance, Minecraft.getMinecraft().fontRenderer, drawColor);
-                    if(nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+                    if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
                         Rectangle rec = new Rectangle(nodeX + 4, nodeY + 17, (int) (length * 0.75F), 5);
                         infoBoxes.put(rec, nodeStack.requirements);
                     }
                 }
 
                 drawLine(
-                        nodeX + offsetCorrection, nodeY + offsetCorrection,
-                        nodeX + offsetCorrection - 4,
-                        nodeY + offsetCorrection + possibleChildOffset,
-                        drawColor);
+                    nodeX + offsetCorrection,
+                    nodeY + offsetCorrection,
+                    nodeX + offsetCorrection - 4,
+                    nodeY + offsetCorrection + possibleChildOffset,
+                    drawColor);
                 drawLine(
-                        nodeX + offsetCorrection, nodeY + offsetCorrection,
-                        nodeX + offsetCorrection + 4,
-                        nodeY + offsetCorrection + possibleChildOffset,
-                        drawColor);
+                    nodeX + offsetCorrection,
+                    nodeY + offsetCorrection,
+                    nodeX + offsetCorrection + 4,
+                    nodeY + offsetCorrection + possibleChildOffset,
+                    drawColor);
             }
-            return; //Has no children anymore.
+            return; // Has no children anymore.
         }
 
         Color drawColor = lineColorBlack;
 
-        if(nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+        if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
             drawColor = lineColorRed;
         }
 
         float chance = nodeStack.baseChance;
-        if(chance > 0) {
+        if (chance > 0) {
             int length = drawChanceInfo(nodeX, nodeY, chance, Minecraft.getMinecraft().fontRenderer, drawColor);
-            if(nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+            if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
                 Rectangle rec = new Rectangle(nodeX + 4, nodeY + 17, (int) (length * 0.75F), 5);
                 infoBoxes.put(rec, nodeStack.requirements);
             }
@@ -181,14 +188,18 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
         CachedBeeMutationTree.PositionedMutationNodeStack left = nodeStack.leftChild;
         drawLine(
-                nodeX + offsetCorrection, nodeY + offsetCorrection,
-                left.relx + offsetCorrection, left.rely + offsetCorrection,
-                drawColor);
+            nodeX + offsetCorrection,
+            nodeY + offsetCorrection,
+            left.relx + offsetCorrection,
+            left.rely + offsetCorrection,
+            drawColor);
         CachedBeeMutationTree.PositionedMutationNodeStack right = nodeStack.rightChild;
         drawLine(
-                nodeX + offsetCorrection, nodeY + offsetCorrection,
-                right.relx + offsetCorrection, right.rely + offsetCorrection,
-                drawColor);
+            nodeX + offsetCorrection,
+            nodeY + offsetCorrection,
+            right.relx + offsetCorrection,
+            right.rely + offsetCorrection,
+            drawColor);
 
         drawExtrasFrom(left, infoBoxes);
         drawExtrasFrom(right, infoBoxes);
@@ -200,10 +211,11 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         GL11.glScalef(0.65F, 0.65F, 0.65F);
         int chAsInt = (int) (chance);
         StringBuilder sb = new StringBuilder().append(EnumChatFormatting.BOLD);
-        if(chAsInt <= 0) {
+        if (chAsInt <= 0) {
             sb.append("<1%");
         } else {
-            sb.append(chAsInt).append("%");
+            sb.append(chAsInt)
+                .append("%");
         }
         int length = fr.drawString(sb.toString(), 0, 0, drawColor.getRGB());
         GL11.glPopMatrix();
@@ -211,13 +223,13 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     @Override
-    public List<String> handleTooltip(GuiRecipe gui, List<String> currenttip, int recipe) {
-        if(GuiContainerManager.shouldShowTooltip(gui) && currenttip.size() == 0) {
+    public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.size() == 0) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = getGuiOffset(gui);
             Point relMouse = new Point(pos.x - guiOffset.x - 5, pos.y - guiOffset.y - 16);
             for (Rectangle rec : tipBoxes.keySet()) {
-                if(rec.contains(relMouse)) {
+                if (rec.contains(relMouse)) {
                     return new LinkedList<String>(tipBoxes.get(rec));
                 }
             }
@@ -264,7 +276,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public void loadUsageRecipes(String inputId, Object... ingredients) {
-        if(speciesRoot == null) return;
+        if (speciesRoot == null) return;
 
         if (inputId.equals("item")) {
             loadUsageRecipes((ItemStack) ingredients[0]);
@@ -272,7 +284,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     public void loadUsageRecipes(ItemStack ingredient) {
-        if(speciesRoot == null) return;
+        if (speciesRoot == null) return;
 
         if (!speciesRoot.isMember(ingredient)) {
             return;
@@ -286,14 +298,19 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
             BeeBetterAtBees.log.warn("Genome is null when searching recipe for %s", ingredient.toString());
             return;
         }
-        if (individual.getGenome().getPrimary() == null) {
+        if (individual.getGenome()
+            .getPrimary() == null) {
             BeeBetterAtBees.log.warn("Species is null when searching recipe for %s", ingredient.toString());
             return;
         }
-        IAlleleSpecies species = individual.getGenome().getPrimary();
+        IAlleleSpecies species = individual.getGenome()
+            .getPrimary();
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
-            if(mutation.getAllele0().equals(species) || mutation.getAllele1().equals(species)) {
-                if(!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
+            if (mutation.getAllele0()
+                .equals(species)
+                || mutation.getAllele1()
+                    .equals(species)) {
+                if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
                     this.arecipes.add(new CachedBeeMutationTree(mutation));
                 }
             }
@@ -303,18 +320,18 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     private void cleanupDuplicateRecipes() {
         for (CachedRecipe recipe : arecipes) {
-            if(recipe instanceof CachedBeeMutationTree) {
+            if (recipe instanceof CachedBeeMutationTree) {
                 boolean clean = true;
                 Iterator<CachedRecipe> iterator = arecipes.iterator();
                 while (iterator.hasNext()) {
                     CachedRecipe recipeOther = iterator.next();
-                    if(recipe == recipeOther) continue;
-                    if(recipe.equals(recipeOther)) {
+                    if (recipe == recipeOther) continue;
+                    if (recipe.equals(recipeOther)) {
                         iterator.remove();
                         clean = false;
                     }
                 }
-                if(!clean) {
+                if (!clean) {
                     cleanupDuplicateRecipes();
                     break;
                 }

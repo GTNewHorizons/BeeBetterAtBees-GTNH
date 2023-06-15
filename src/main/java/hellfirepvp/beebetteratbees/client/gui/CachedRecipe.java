@@ -1,21 +1,22 @@
 package hellfirepvp.beebetteratbees.client.gui;
 
-import codechicken.nei.NEIServerUtils;
-import codechicken.nei.PositionedStack;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+
+import codechicken.nei.NEIServerUtils;
+import codechicken.nei.PositionedStack;
+
 /**
-* HellFirePvP@Admin
-* Date: 28.04.2016 / 23:46
-* on BeeBetterAtBees
-* CachedRecipe
-*/
+ * HellFirePvP@Admin
+ * Date: 28.04.2016 / 23:46
+ * on BeeBetterAtBees
+ * CachedRecipe
+ */
 public abstract class CachedRecipe {
 
     final long offset = System.currentTimeMillis();
@@ -66,7 +67,7 @@ public abstract class CachedRecipe {
                 if (NEIServerUtils.areStacksSameTypeCrafting(ingredient, stack.items[i])) {
                     stack.item = stack.items[i];
                     stack.item.setTagCompound(ingredient.getTagCompound());
-                    stack.items = new ItemStack[]{stack.item};
+                    stack.items = new ItemStack[] { stack.item };
                     stack.setPermutationToRender(0);
                     break;
                 }

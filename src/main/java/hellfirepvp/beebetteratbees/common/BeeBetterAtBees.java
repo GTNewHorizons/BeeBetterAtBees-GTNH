@@ -1,13 +1,12 @@
 package hellfirepvp.beebetteratbees.common;
 
-import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.SidedProxy;
-import cpw.mods.fml.common.event.FMLConstructionEvent;
-import cpw.mods.fml.common.event.FMLInitializationEvent;
-import cpw.mods.fml.common.event.FMLPostInitializationEvent;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.FMLPostInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 
 /**
  * HellFirePvP@Admin
@@ -15,13 +14,17 @@ import org.apache.logging.log4j.Logger;
  * on BeeBetterAtBees
  * BeeBetterAtBees
  */
-@Mod(modid = BeeBetterAtBees.MODID, name = BeeBetterAtBees.NAME, version = BeeBetterAtBees.VERSION, dependencies = "required-after:NotEnoughItems;required-after:Forestry")
+@Mod(
+    modid = BeeBetterAtBees.MODID,
+    name = BeeBetterAtBees.NAME,
+    version = BeeBetterAtBees.VERSION,
+    dependencies = "required-after:NotEnoughItems;required-after:Forestry")
 public class BeeBetterAtBees {
 
     public static final String MODID = "beebetteratbees";
     public static final String NAME = "BeeBetterAtBees";
 
-    public static final String VERSION = "0.3";
+    public static final String VERSION = Tags.VERSION;
 
     private static final String PROXY_CLIENT = "hellfirepvp.beebetteratbees.client.ClientProxy";
     private static final String PROXY_SERVER = "hellfirepvp.beebetteratbees.common.CommonProxy";
@@ -36,7 +39,6 @@ public class BeeBetterAtBees {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        event.getModMetadata().version = VERSION;
         ModConfig.init(event.getSuggestedConfigurationFile());
     }
 
