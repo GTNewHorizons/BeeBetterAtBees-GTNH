@@ -1,11 +1,12 @@
 package hellfirepvp.beebetteratbees.common;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * HellFirePvP@Admin
@@ -13,7 +14,11 @@ import org.apache.logging.log4j.Logger;
  * on BeeBetterAtBees
  * BeeBetterAtBees
  */
-@Mod(modid = BeeBetterAtBees.MODID, name = BeeBetterAtBees.NAME, version = BeeBetterAtBees.VERSION, dependencies = "required-after:NotEnoughItems;required-after:Forestry")
+@Mod(
+    modid = BeeBetterAtBees.MODID,
+    name = BeeBetterAtBees.NAME,
+    version = BeeBetterAtBees.VERSION,
+    dependencies = "required-after:NotEnoughItems;required-after:Forestry")
 public class BeeBetterAtBees {
 
     public static final String MODID = "beebetteratbees";

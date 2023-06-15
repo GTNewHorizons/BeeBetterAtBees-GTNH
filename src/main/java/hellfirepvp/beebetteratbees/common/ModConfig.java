@@ -1,8 +1,8 @@
 package hellfirepvp.beebetteratbees.common;
 
-import net.minecraftforge.common.config.Configuration;
-
 import java.io.File;
+
+import net.minecraftforge.common.config.Configuration;
 
 /**
  * HellFirePvP@Admin
@@ -30,8 +30,16 @@ public class ModConfig {
     }
 
     private static void loadFromConfig() {
-        shouldShowSecretRecipes = config.getBoolean("shouldShowSecretMutations", "general", false, "Set this to true, if you wish for the mod to show secret bee mutations.");
-        showDuplicateTrees = config.getBoolean("shouldShowDuplicateTrees", "general", true, "If this is set to false, it will not show the mutation tree for a specific bee if the same tree is already displayed.");
+        shouldShowSecretRecipes = config.getBoolean(
+            "shouldShowSecretMutations",
+            "general",
+            false,
+            "Set this to true, if you wish for the mod to show secret bee mutations.");
+        showDuplicateTrees = config.getBoolean(
+            "shouldShowDuplicateTrees",
+            "general",
+            true,
+            "If this is set to false, it will not show the mutation tree for a specific bee if the same tree is already displayed.");
     }
 
     public static void save() {

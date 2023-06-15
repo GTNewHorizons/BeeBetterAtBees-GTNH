@@ -1,5 +1,19 @@
 package hellfirepvp.beebetteratbees.client.gui;
 
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.inventory.Container;
+import net.minecraft.item.ItemStack;
+
+import org.lwjgl.opengl.GL11;
+
 import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -17,18 +31,6 @@ import codechicken.nei.recipe.GuiUsageRecipe;
 import codechicken.nei.recipe.ICraftingHandler;
 import codechicken.nei.recipe.IUsageHandler;
 import codechicken.nei.recipe.RecipeInfo;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.inventory.Container;
-import net.minecraft.item.ItemStack;
-import org.lwjgl.opengl.GL11;
-
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * HellFirePvP@Admin
@@ -47,18 +49,21 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
         RecipeTransferRectHandler.registerRectsToGuis(getRecipeTransferRectGuis(), this.transferRects);
     }
 
-    private static boolean transferRect(GuiContainer gui, Collection<RecipeTransferRect> transferRects, int offsetx, int offsety, boolean usage) {
+    private static boolean transferRect(GuiContainer gui, Collection<RecipeTransferRect> transferRects, int offsetx,
+        int offsety, boolean usage) {
         Point pos = GuiDraw.getMousePosition();
         Point relMouse = new Point(pos.x - gui.width - offsetx, pos.y - gui.height - offsety);
         for (RecipeTransferRect rect : transferRects) {
-            if ((rect.rect.contains(relMouse)) && (usage ? GuiUsageRecipe.openRecipeGui(rect.outputId, rect.results) : GuiCraftingRecipe.openRecipeGui(rect.outputId, rect.results))) {
+            if ((rect.rect.contains(relMouse)) && (usage ? GuiUsageRecipe.openRecipeGui(rect.outputId, rect.results)
+                : GuiCraftingRecipe.openRecipeGui(rect.outputId, rect.results))) {
                 return true;
             }
         }
         return false;
     }
 
-    private static List<String> transferRectTooltip(GuiContainer gui, Collection<RecipeTransferRect> transferRects, int offsetx, int offsety, List<String> currenttip) {
+    private static List<String> transferRectTooltip(GuiContainer gui, Collection<RecipeTransferRect> transferRects,
+        int offsetx, int offsety, List<String> currenttip) {
         Point pos = GuiDraw.getMousePosition();
         Point relMouse = new Point(pos.x - gui.width - offsetx, pos.y - gui.height - offsety);
         for (RecipeTransferRect rect : transferRects) {
@@ -94,7 +99,8 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     public AbstractTreeGUIHandler newInstance() {
         try {
-            return getClass().getConstructor().newInstance();
+            return getClass().getConstructor()
+                .newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -136,17 +142,20 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     @Override
     public List<PositionedStack> getIngredientStacks(int recipe) {
-        return this.arecipes.get(recipe).getIngredients();
+        return this.arecipes.get(recipe)
+            .getIngredients();
     }
 
     @Override
     public PositionedStack getResultStack(int recipe) {
-        return this.arecipes.get(recipe).getResult();
+        return this.arecipes.get(recipe)
+            .getResult();
     }
 
     @Override
     public List<PositionedStack> getOtherStacks(int recipe) {
-        return this.arecipes.get(recipe).getOtherStacks();
+        return this.arecipes.get(recipe)
+            .getOtherStacks();
     }
 
     @Override
@@ -158,7 +167,8 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     @Override
     public boolean hasOverlay(GuiContainer gui, Container container, int recipe) {
-        return (RecipeInfo.hasDefaultOverlay(gui, getOverlayIdentifier())) || (RecipeInfo.hasOverlayHandler(gui, getOverlayIdentifier()));
+        return (RecipeInfo.hasDefaultOverlay(gui, getOverlayIdentifier()))
+            || (RecipeInfo.hasOverlayHandler(gui, getOverlayIdentifier()));
     }
 
     @Override
@@ -257,7 +267,8 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
         private static HashMap<Class<? extends GuiContainer>, HashSet<RecipeTransferRect>> guiMap = new HashMap<Class<? extends GuiContainer>, HashSet<RecipeTransferRect>>();
 
-        public static void registerRectsToGuis(List<Class<? extends GuiContainer>> classes, List<RecipeTransferRect> rects) {
+        public static void registerRectsToGuis(List<Class<? extends GuiContainer>> classes,
+            List<RecipeTransferRect> rects) {
             if (classes == null) {
                 return;
             }
@@ -309,16 +320,13 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
         }
 
         @Override
-        public void onKeyTyped(GuiContainer gui, char keyChar, int keyID) {
-        }
+        public void onKeyTyped(GuiContainer gui, char keyChar, int keyID) {}
 
         @Override
-        public void onMouseClicked(GuiContainer gui, int mousex, int mousey, int button) {
-        }
+        public void onMouseClicked(GuiContainer gui, int mousex, int mousey, int button) {}
 
         @Override
-        public void onMouseUp(GuiContainer gui, int mousex, int mousey, int button) {
-        }
+        public void onMouseUp(GuiContainer gui, int mousex, int mousey, int button) {}
 
         @Override
         public boolean keyTyped(GuiContainer gui, char keyChar, int keyID) {
@@ -331,8 +339,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
         }
 
         @Override
-        public void onMouseScrolled(GuiContainer gui, int mousex, int mousey, int scrolled) {
-        }
+        public void onMouseScrolled(GuiContainer gui, int mousex, int mousey, int scrolled) {}
 
         @Override
         public List<String> handleTooltip(GuiContainer gui, int mousex, int mousey, List<String> currenttip) {
@@ -341,7 +348,8 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
             }
             if ((GuiContainerManager.shouldShowTooltip(gui)) && (currenttip.size() == 0)) {
                 int[] offset = RecipeInfo.getGuiOffset(gui);
-                currenttip = AbstractTreeGUIHandler.transferRectTooltip(gui, guiMap.get(gui.getClass()), offset[0], offset[1], currenttip);
+                currenttip = AbstractTreeGUIHandler
+                    .transferRectTooltip(gui, guiMap.get(gui.getClass()), offset[0], offset[1], currenttip);
             }
             return currenttip;
         }
@@ -352,13 +360,13 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
         }
 
         @Override
-        public List<String> handleItemTooltip(GuiContainer gui, ItemStack itemstack, int mousex, int mousey, List<String> currenttip) {
+        public List<String> handleItemTooltip(GuiContainer gui, ItemStack itemstack, int mousex, int mousey,
+            List<String> currenttip) {
             return currenttip;
         }
 
         @Override
-        public void onMouseDragged(GuiContainer gui, int mousex, int mousey, int button, long heldTime) {
-        }
+        public void onMouseDragged(GuiContainer gui, int mousex, int mousey, int button, long heldTime) {}
 
     }
 

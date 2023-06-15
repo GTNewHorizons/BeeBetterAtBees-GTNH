@@ -26,7 +26,7 @@ public class SimpleBinaryTree<E> {
 
     private Node<E> buildSubTree(E superNodeValue, int maxFollowingDepth) {
         E[] subNodes = rootProvider.provideSubNodes(superNodeValue);
-        if(subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
+        if (subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
             return new Leaf<E>(superNodeValue);
         } else {
             Node<E> left = buildSubTree(subNodes[0], maxFollowingDepth - 1);
@@ -99,9 +99,14 @@ public class SimpleBinaryTree<E> {
 
         @Override
         public String toString() {
-            return new StringBuilder().append("[").append(left.toString())
-                    .append("], ").append(value.toString()).append(", [")
-                    .append(right.toString()).append("]").toString();
+            return new StringBuilder().append("[")
+                .append(left.toString())
+                .append("], ")
+                .append(value.toString())
+                .append(", [")
+                .append(right.toString())
+                .append("]")
+                .toString();
         }
 
         public void removeDuplicate() {
