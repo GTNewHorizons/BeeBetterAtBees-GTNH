@@ -40,7 +40,7 @@ public class SimpleBinaryTree<E> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SimpleBinaryTree that = (SimpleBinaryTree) o;
+        SimpleBinaryTree<?> that = (SimpleBinaryTree<?>) o;
         return !(root != null ? !root.equals(that.root) : that.root != null);
     }
 
@@ -88,7 +88,7 @@ public class SimpleBinaryTree<E> {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            Node node = (Node) o;
+            Node<?> node = (Node<?>) o;
             return !(value != null ? !value.equals(node.value) : node.value != null);
         }
 

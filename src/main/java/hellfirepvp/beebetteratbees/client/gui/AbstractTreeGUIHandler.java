@@ -22,8 +22,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 
-import java.awt.*;
-import java.util.ArrayList;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -94,7 +94,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     public AbstractTreeGUIHandler newInstance() {
         try {
-            return getClass().newInstance();
+            return getClass().getConstructor().newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -181,7 +181,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
     }
 
     @Override
-    public List<String> handleTooltip(GuiRecipe gui, List<String> currenttip, int recipe) {
+    public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
         if ((GuiContainerManager.shouldShowTooltip(gui)) && (currenttip.size() == 0)) {
             Point offset = gui.getRecipePosition(recipe);
             currenttip = transferRectTooltip(gui, this.transferRects, offset.x, offset.y, currenttip);
@@ -190,12 +190,12 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
     }
 
     @Override
-    public List<String> handleItemTooltip(GuiRecipe gui, ItemStack stack, List<String> currenttip, int recipe) {
+    public List<String> handleItemTooltip(GuiRecipe<?> gui, ItemStack stack, List<String> currenttip, int recipe) {
         return currenttip;
     }
 
     @Override
-    public boolean keyTyped(GuiRecipe gui, char keyChar, int keyCode, int recipe) {
+    public boolean keyTyped(GuiRecipe<?> gui, char keyChar, int keyCode, int recipe) {
         if (keyCode == NEIClientConfig.getKeyBinding("gui.recipe")) {
             return transferRect(gui, recipe, false);
         }
@@ -206,7 +206,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
     }
 
     @Override
-    public boolean mouseClicked(GuiRecipe gui, int button, int recipe) {
+    public boolean mouseClicked(GuiRecipe<?> gui, int button, int recipe) {
         if (button == 0) {
             return transferRect(gui, recipe, false);
         }
@@ -216,7 +216,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
         return false;
     }
 
-    private boolean transferRect(GuiRecipe gui, int recipe, boolean usage) {
+    private boolean transferRect(GuiRecipe<?> gui, int recipe, boolean usage) {
         Point offset = gui.getRecipePosition(recipe);
         return transferRect(gui, this.transferRects, offset.x, offset.y, usage);
     }

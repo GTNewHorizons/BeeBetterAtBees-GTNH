@@ -22,7 +22,9 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import org.lwjgl.opengl.GL11;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
@@ -211,7 +213,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     @Override
-    public List<String> handleTooltip(GuiRecipe gui, List<String> currenttip, int recipe) {
+    public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
         if(GuiContainerManager.shouldShowTooltip(gui) && currenttip.size() == 0) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = getGuiOffset(gui);
