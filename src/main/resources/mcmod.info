@@ -1,0 +1,16 @@
+[
+{
+  "modid": "beebetteratbees",
+  "name": "BeeBetterAtBees",
+  "description": "ClientSide NEI Addon to make bees a little less painful",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["HellFirePvP"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
