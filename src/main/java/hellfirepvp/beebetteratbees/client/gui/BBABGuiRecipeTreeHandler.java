@@ -237,7 +237,6 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     private static void drawLine(double lx, double ly, double hx, double hy, Color color) {
         GL11.glPushMatrix();
         GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glDepthMask(true);
         GL11.glLineWidth(3.0F);
         GL11.glEnable(GL11.GL_LINE_SMOOTH);
         GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
@@ -251,7 +250,6 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         tes.draw();
 
         GL11.glDisable(GL11.GL_LINE_SMOOTH);
-        GL11.glDepthMask(false);
         GL11.glLineWidth(2.0F);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_BLEND);
