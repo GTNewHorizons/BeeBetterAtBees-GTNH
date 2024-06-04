@@ -41,8 +41,8 @@ import codechicken.nei.recipe.RecipeInfo;
 public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsageHandler {
 
     public int cycleticks = Math.abs((int) System.currentTimeMillis());
-    public LinkedList<CachedRecipe> arecipes = new LinkedList<CachedRecipe>();
-    public LinkedList<RecipeTransferRect> transferRects = new LinkedList<RecipeTransferRect>();
+    public LinkedList<CachedRecipe> arecipes = new LinkedList<>();
+    public LinkedList<RecipeTransferRect> transferRects = new LinkedList<>();
 
     public AbstractTreeGUIHandler() {
         loadTransferRects();
@@ -86,7 +86,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
     public List<Class<? extends GuiContainer>> getRecipeTransferRectGuis() {
         Class<? extends GuiContainer> clazz = getGuiClass();
         if (clazz != null) {
-            LinkedList<Class<? extends GuiContainer>> list = new LinkedList<Class<? extends GuiContainer>>();
+            LinkedList<Class<? extends GuiContainer>> list = new LinkedList<>();
             list.add(clazz);
             return list;
         }
@@ -192,9 +192,9 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     @Override
     public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
-        if ((GuiContainerManager.shouldShowTooltip(gui)) && (currenttip.size() == 0)) {
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
             Point offset = gui.getRecipePosition(recipe);
-            currenttip = transferRectTooltip(gui, this.transferRects, offset.x, offset.y, currenttip);
+            return transferRectTooltip(gui, this.transferRects, offset.x, offset.y, currenttip);
         }
         return currenttip;
     }
@@ -265,7 +265,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
 
     public static class RecipeTransferRectHandler implements IContainerInputHandler, IContainerTooltipHandler {
 
-        private static HashMap<Class<? extends GuiContainer>, HashSet<RecipeTransferRect>> guiMap = new HashMap<Class<? extends GuiContainer>, HashSet<RecipeTransferRect>>();
+        private static final HashMap<Class<? extends GuiContainer>, HashSet<RecipeTransferRect>> guiMap = new HashMap<>();
 
         public static void registerRectsToGuis(List<Class<? extends GuiContainer>> classes,
             List<RecipeTransferRect> rects) {
@@ -273,11 +273,7 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
                 return;
             }
             for (Class<? extends GuiContainer> clazz : classes) {
-                HashSet<RecipeTransferRect> set = guiMap.get(clazz);
-                if (set == null) {
-                    set = new HashSet<RecipeTransferRect>();
-                    guiMap.put(clazz, set);
-                }
+                HashSet<RecipeTransferRect> set = guiMap.computeIfAbsent(clazz, k -> new HashSet<>());
                 set.addAll(rects);
             }
         }
@@ -346,10 +342,9 @@ public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsage
             if (!canHandle(gui)) {
                 return currenttip;
             }
-            if ((GuiContainerManager.shouldShowTooltip(gui)) && (currenttip.size() == 0)) {
+            if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
                 int[] offset = RecipeInfo.getGuiOffset(gui);
-                currenttip = AbstractTreeGUIHandler
-                    .transferRectTooltip(gui, guiMap.get(gui.getClass()), offset[0], offset[1], currenttip);
+                return transferRectTooltip(gui, guiMap.get(gui.getClass()), offset[0], offset[1], currenttip);
             }
             return currenttip;
         }

@@ -3,7 +3,6 @@ package hellfirepvp.beebetteratbees.client.gui;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -13,7 +12,6 @@ import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumChatFormatting;
@@ -24,7 +22,6 @@ import org.lwjgl.opengl.GL11;
 import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiRecipe;
-import cpw.mods.fml.relauncher.ReflectionHelper;
 import forestry.api.apiculture.IBeeMutation;
 import forestry.api.apiculture.IBeeRoot;
 import forestry.api.genetics.AlleleManager;
@@ -49,8 +46,8 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     private static IBeeRoot speciesRoot;
 
     public static List<IBeeMutation> getMutationsWithResult(IAllele allele) {
-        if (speciesRoot == null) return new LinkedList<IBeeMutation>();
-        LinkedList<IBeeMutation> out = new LinkedList<IBeeMutation>();
+        if (speciesRoot == null) return new LinkedList<>();
+        LinkedList<IBeeMutation> out = new LinkedList<>();
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
             if (mutation.getTemplate()[0].equals(allele)) out.add(mutation);
         }
@@ -114,14 +111,14 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         cleanupDuplicateRecipes();
     }
 
-    private Map<Rectangle, Collection<String>> tipBoxes = new HashMap<Rectangle, Collection<String>>();
+    private Map<Rectangle, Collection<String>> tipBoxes = new HashMap<>();
 
     @Override
     public void drawExtras(int recipe) {
         CachedRecipe rec = this.arecipes.get(recipe);
-        if (rec instanceof CachedBeeMutationTree) {
-            Map<Rectangle, Collection<String>> boxes = new HashMap<Rectangle, Collection<String>>(4);
-            CachedBeeMutationTree.PositionedMutationNodeStack root = ((CachedBeeMutationTree) rec).getRootStack();
+        if (rec instanceof CachedBeeMutationTree cachedTree) {
+            Map<Rectangle, Collection<String>> boxes = new HashMap<>(4);
+            CachedBeeMutationTree.PositionedMutationNodeStack root = cachedTree.getRootStack();
             drawExtrasFrom(root, boxes);
             this.tipBoxes = boxes;
         }
@@ -224,30 +221,17 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
-        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.size() == 0) {
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
             Point pos = GuiDraw.getMousePosition();
-            Point guiOffset = getGuiOffset(gui);
+            Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
             Point relMouse = new Point(pos.x - guiOffset.x - 5, pos.y - guiOffset.y - 16);
             for (Rectangle rec : tipBoxes.keySet()) {
                 if (rec.contains(relMouse)) {
-                    return new LinkedList<String>(tipBoxes.get(rec));
+                    return new LinkedList<>(tipBoxes.get(rec));
                 }
             }
         }
         return super.handleTooltip(gui, currenttip, recipe);
-    }
-
-    private Point getGuiOffset(GuiContainer ct) {
-        try {
-            Field fP = ReflectionHelper.findField(GuiContainer.class, "guiLeft", "field_147003_i");
-            fP.setAccessible(true);
-            int left = (Integer) fP.get(ct);
-            fP = ReflectionHelper.findField(GuiContainer.class, "guiTop", "field_147009_r");
-            fP.setAccessible(true);
-            int top = (Integer) fP.get(ct);
-            return new Point(left, top);
-        } catch (Exception e) {}
-        return new Point(0, 0);
     }
 
     private static void drawLine(double lx, double ly, double hx, double hy, Color color) {

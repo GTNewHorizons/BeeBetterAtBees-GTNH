@@ -1,5 +1,7 @@
 package hellfirepvp.beebetteratbees.client.util;
 
+import java.util.Objects;
+
 /**
  * HellFirePvP@Admin
  * Date: 29.04.2016 / 00:23
@@ -8,8 +10,8 @@ package hellfirepvp.beebetteratbees.client.util;
  */
 public class SimpleBinaryTree<E> {
 
-    private Node<E> root;
-    private RootProvider<E> rootProvider;
+    private final Node<E> root;
+    private final RootProvider<E> rootProvider;
 
     public SimpleBinaryTree(int maxDepth, E rootValue, RootProvider<E> provider) {
         this.rootProvider = provider;
@@ -27,12 +29,12 @@ public class SimpleBinaryTree<E> {
     private Node<E> buildSubTree(E superNodeValue, int maxFollowingDepth) {
         E[] subNodes = rootProvider.provideSubNodes(superNodeValue);
         if (subNodes == null || subNodes.length == 0 || maxFollowingDepth <= 0) {
-            return new Leaf<E>(superNodeValue);
+            return new Leaf<>(superNodeValue);
         } else {
             Node<E> left = buildSubTree(subNodes[0], maxFollowingDepth - 1);
             Node<E> right = buildSubTree(subNodes[1], maxFollowingDepth - 1);
             int depth = Math.max(left.getMaxFollowingDepth(), right.getMaxFollowingDepth());
-            return new Node<E>(superNodeValue, left, right, depth + 1);
+            return new Node<>(superNodeValue, left, right, depth + 1);
         }
     }
 
@@ -41,7 +43,7 @@ public class SimpleBinaryTree<E> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SimpleBinaryTree<?> that = (SimpleBinaryTree<?>) o;
-        return !(root != null ? !root.equals(that.root) : that.root != null);
+        return Objects.equals(root, that.root);
     }
 
     @Override
@@ -89,7 +91,7 @@ public class SimpleBinaryTree<E> {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Node<?> node = (Node<?>) o;
-            return !(value != null ? !value.equals(node.value) : node.value != null);
+            return Objects.equals(value, node.value);
         }
 
         @Override
