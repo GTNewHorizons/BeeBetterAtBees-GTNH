@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 import codechicken.nei.PositionedStack;
 import forestry.api.apiculture.IBeeMutation;
@@ -30,8 +31,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int X_SEPERATION_THRESHOLD = 7;
     private static final int Y_OFFSET = 0;
 
-    private SimpleBinaryTree<IAllele> mutationTree;
-    private List<PositionedMutationNodeStack> evaluatedBeePositions;
+    private final SimpleBinaryTree<IAllele> mutationTree;
+    private final List<PositionedMutationNodeStack> evaluatedBeePositions;
     private int evaluatedMaxX;
     public final boolean oversized;
     private PositionedMutationNodeStack rootStack;
@@ -39,15 +40,15 @@ public class CachedBeeMutationTree extends CachedRecipe {
     public CachedBeeMutationTree(IBeeMutation parentMutation) {
         // parentMutation.getTemplate() Gets results primary at array[0], secondary at array[1]
         // parentMutation.getAllele0() or getAllele1() Gets bees needed for mutation.
-        this.mutationTree = new SimpleBinaryTree<IAllele>(
+        this.mutationTree = new SimpleBinaryTree<>(
             4,
             parentMutation.getTemplate()[0],
-            new SimpleBinaryTree.RootProvider<IAllele>() {
+            new SimpleBinaryTree.RootProvider<>() {
 
                 @Override
                 public IAllele[] provideSubNodes(IAllele superNode) {
                     List<IBeeMutation> mutations = BBABGuiRecipeTreeHandler.getMutationsWithResult(superNode);
-                    if (mutations.size() > 0) {
+                    if (!mutations.isEmpty()) {
                         IBeeMutation mutation = mutations.get(0);
 
                         return new IAllele[] { mutation.getAllele0(), mutation.getAllele1() };
@@ -58,12 +59,12 @@ public class CachedBeeMutationTree extends CachedRecipe {
             });
 
         if (!ModConfig.showDuplicateTrees) {
-            List<IAllele> foundMutationTrees = new ArrayList<IAllele>();
+            List<IAllele> foundMutationTrees = new ArrayList<>();
             removeAndReplaceDuplicates(this.mutationTree.getRoot(), foundMutationTrees);
         }
 
         // Important: We don't need to buffer root, because that's the "result"
-        this.evaluatedBeePositions = new LinkedList<PositionedMutationNodeStack>();
+        this.evaluatedBeePositions = new LinkedList<>();
         int iterationDepth = 3;
         int maxTotalDepth = Math.min(
             iterationDepth,
@@ -76,7 +77,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
         int yStep = 110 / maxTotalDepth;
 
         this.oversized = checkSeparationWidth(maxTotalDepth, X_SEPERATION_THRESHOLD);
-        this.evaluatedMaxX = /* this.oversized ? buildNewMaxX(maxTotalDepth, X_SEPERATION_THRESHOLD) : */ MAX_X;
+        this.evaluatedMaxX = MAX_X;
 
         int center = (MIN_X + this.evaluatedMaxX) / 2;
         PositionedMutationNodeStack leftChild = placeInRenderBuffer(
@@ -100,13 +101,13 @@ public class CachedBeeMutationTree extends CachedRecipe {
             mutationTree.getRoot()
                 .getValue());
         float ch = -1;
-        Collection<String> requirements = new LinkedList<String>();
-        if (mutationsToRoot.size() > 0) {
+        Collection<String> requirements = new LinkedList<>();
+        if (!mutationsToRoot.isEmpty()) {
             IBeeMutation mut = mutationsToRoot.get(0);
             ch = mut.getBaseChance();
             try {
                 requirements = mut.getSpecialConditions();
-            } catch (Throwable tr) {}
+            } catch (Throwable ignored) {}
         }
 
         this.rootStack = new PositionedMutationNodeStack(
@@ -129,7 +130,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
                                                                                                                       // lines.
         if (discoveredMutations.contains(node.getValue())) {
             List<IBeeMutation> mutations = getMutationsWithResult(node.getValue());
-            if (mutations.size() > 0) node.removeDuplicate(); // Only if it actually has mutations that has this node as
+            if (!mutations.isEmpty()) node.removeDuplicate(); // Only if it actually has mutations that has this node as
                                                               // result.
         } else {
             discoveredMutations.add(node.getValue());
@@ -139,13 +140,6 @@ public class CachedBeeMutationTree extends CachedRecipe {
             }
         }
     }
-
-    /*
-     * private int buildNewMaxX(int maxTotalDepth, int xSeparationThreshold) {
-     * int maxDivision = (int) Math.pow(2, maxTotalDepth + 1);
-     * return MIN_X + (maxDivision * xSeparationThreshold);
-     * }
-     */
 
     private boolean checkSeparationWidth(int maxTotalDepth, int xSeparationThreshold) {
         double maxDivision = Math.pow(2, maxTotalDepth + 1);
@@ -160,14 +154,14 @@ public class CachedBeeMutationTree extends CachedRecipe {
         if (iterationMaxCount < 0 || node.getMaxFollowingDepth() <= 0) {
             List<IBeeMutation> mutationsToRoot = getMutationsWithResult(node.getValue());
             float ch = -1;
-            Collection<String> requirements = new LinkedList<String>();
-            if (mutationsToRoot.size() > 0) {
+            Collection<String> requirements = new LinkedList<>();
+            if (!mutationsToRoot.isEmpty()) {
                 IBeeMutation mut = mutationsToRoot.get(0);
                 ch = mut.getBaseChance();
                 try {
                     requirements = mut.getSpecialConditions();
                 } catch (Throwable tr) {
-                    requirements = new LinkedList<String>();
+                    requirements = new LinkedList<>();
                 }
             }
             PositionedMutationNodeStack leaf = new PositionedMutationNodeStack( // Leaf
@@ -185,14 +179,14 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         List<IBeeMutation> mutations = getMutationsWithResult(node.getValue());
         float ch = -1;
-        Collection<String> requirements = new LinkedList<String>();
-        if (mutations.size() > 0) {
+        Collection<String> requirements = new LinkedList<>();
+        if (!mutations.isEmpty()) {
             IBeeMutation mut = mutations.get(0);
             ch = mut.getBaseChance();
             try {
                 requirements = mut.getSpecialConditions();
             } catch (Throwable tr) {
-                requirements = new LinkedList<String>();
+                requirements = new LinkedList<>();
             }
         }
 
@@ -218,7 +212,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CachedBeeMutationTree that = (CachedBeeMutationTree) o;
-        return !(mutationTree != null ? !mutationTree.equals(that.mutationTree) : that.mutationTree != null);
+        return Objects.equals(mutationTree, that.mutationTree);
     }
 
     @Override
@@ -237,7 +231,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
     @Override
     public List<PositionedStack> getIngredients() {
-        return new ArrayList<PositionedStack>(evaluatedBeePositions);
+        return new ArrayList<>(evaluatedBeePositions);
     }
 
     public static class PositionedMutationNodeStack extends PositionedStack {
