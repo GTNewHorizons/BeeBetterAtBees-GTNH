@@ -115,7 +115,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     /**
      * Tooltip rectangles, where list index is the recipe index of this page
      */
-    private ArrayList<Map<Rectangle, Collection<String>>> tipBoxes = new ArrayList<>(2); // 1-2 recipes/pg
+    private final ArrayList<Map<Rectangle, Collection<String>>> tipBoxes = new ArrayList<>(2); // 1-2 recipes/pg
 
     @Override
     public void drawExtras(int recipe) {
@@ -124,7 +124,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
             Map<Rectangle, Collection<String>> boxes = new HashMap<>(4);
             CachedBeeMutationTree.PositionedMutationNodeStack root = cachedTree.getRootStack();
             drawExtrasFrom(root, boxes);
-            this.tipBoxes.add(recipe, boxes);
+            this.tipBoxes.add(boxes);
         }
     }
 
