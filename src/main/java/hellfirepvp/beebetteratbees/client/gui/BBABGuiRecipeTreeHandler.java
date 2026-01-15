@@ -3,6 +3,7 @@ package hellfirepvp.beebetteratbees.client.gui;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -111,7 +112,10 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         cleanupDuplicateRecipes();
     }
 
-    private Map<Rectangle, Collection<String>> tipBoxes = new HashMap<>();
+    /**
+     * Tooltip rectangles, where list index is the recipe index of this page
+     */
+    private final ArrayList<Map<Rectangle, Collection<String>>> tipBoxes = new ArrayList<>(2); // 1-2 recipes/pg
 
     @Override
     public void drawExtras(int recipe) {
@@ -120,7 +124,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
             Map<Rectangle, Collection<String>> boxes = new HashMap<>(4);
             CachedBeeMutationTree.PositionedMutationNodeStack root = cachedTree.getRootStack();
             drawExtrasFrom(root, boxes);
-            this.tipBoxes = boxes;
+            this.tipBoxes.add(boxes);
         }
     }
 
@@ -224,10 +228,14 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
-            Point relMouse = new Point(pos.x - guiOffset.x - 5, pos.y - guiOffset.y - 16);
-            for (Rectangle rec : tipBoxes.keySet()) {
+            Point recipeOffset = gui.getRecipePosition(recipe);
+            Point relMouse = new Point(pos.x - guiOffset.x - recipeOffset.x, pos.y - guiOffset.y - recipeOffset.y);
+            for (Rectangle rec : this.tipBoxes.get(recipe)
+                .keySet()) {
                 if (rec.contains(relMouse)) {
-                    return new LinkedList<>(tipBoxes.get(rec));
+                    return new LinkedList<>(
+                        this.tipBoxes.get(recipe)
+                            .get(rec));
                 }
             }
         }
