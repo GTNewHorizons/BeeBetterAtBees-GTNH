@@ -115,7 +115,7 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     /**
      * Tooltip rectangles, where list index is the recipe index of this page
      */
-    private final ArrayList<Map<Rectangle, Collection<String>>> tipBoxes = new ArrayList<>(2); // 1-2 recipes/pg
+    private final List<Map<Rectangle, Collection<String>>> tipBoxes = new ArrayList<>();
 
     @Override
     public void drawExtras(int recipe) {
@@ -225,17 +225,20 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
-        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()
+            && recipe < tipBoxes.size()
+            && !this.tipBoxes.get(recipe)
+                .isEmpty()) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
             Point recipeOffset = gui.getRecipePosition(recipe);
             Point relMouse = new Point(pos.x - guiOffset.x - recipeOffset.x, pos.y - guiOffset.y - recipeOffset.y);
-            for (Rectangle rec : this.tipBoxes.get(recipe)
-                .keySet()) {
-                if (rec.contains(relMouse)) {
-                    return new LinkedList<>(
-                        this.tipBoxes.get(recipe)
-                            .get(rec));
+
+            for (Map.Entry<Rectangle, Collection<String>> entry : this.tipBoxes.get(recipe)
+                .entrySet()) {
+                if (entry.getKey()
+                    .contains(relMouse)) {
+                    return new LinkedList<>(entry.getValue());
                 }
             }
         }
