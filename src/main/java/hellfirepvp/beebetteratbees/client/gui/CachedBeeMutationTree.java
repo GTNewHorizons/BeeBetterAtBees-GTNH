@@ -2,12 +2,20 @@ package hellfirepvp.beebetteratbees.client.gui;
 
 import static hellfirepvp.beebetteratbees.client.gui.BBABGuiRecipeTreeHandler.*;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.EnumChatFormatting;
+
+import org.lwjgl.opengl.GL11;
+
+import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.PositionedStack;
 import forestry.api.apiculture.IBeeMutation;
 import forestry.api.genetics.IAllele;
@@ -23,6 +31,99 @@ import hellfirepvp.beebetteratbees.common.ModConfig;
  */
 public class CachedBeeMutationTree extends CachedRecipe {
 
+    protected static interface IMutationNode {
+
+        boolean containsPoint(int x, int y);
+
+        void renderNode();
+    }
+
+    protected static class LineNode implements IMutationNode {
+
+        public final double lx;
+        public final double ly;
+        public final double hx;
+        public final double hy;
+        public final Color color;
+
+        public LineNode(double lx, double ly, double hx, double hy, Color color) {
+            this.lx = lx;
+            this.ly = ly;
+            this.hx = hx;
+            this.hy = hy;
+            this.color = color;
+        }
+
+        public boolean containsPoint(int x, int y) {
+            return false;
+        }
+
+        public void renderNode() {
+            GL11.glPushMatrix();
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glLineWidth(3.0F);
+            GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
+            Tessellator tes = Tessellator.instance;
+            tes.startDrawing(GL11.GL_LINE_STRIP);
+            tes.setColorRGBA(color.getRed(), color.getGreen(), color.getBlue(), 127);
+            tes.addVertex(lx, ly, 0);
+            tes.addVertex(hx, hy, 0);
+            tes.draw();
+
+            GL11.glDisable(GL11.GL_LINE_SMOOTH);
+            GL11.glLineWidth(2.0F);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glPopMatrix();
+        }
+    }
+
+    protected static class ChanceInfoNode implements IMutationNode {
+
+        public final int x;
+        public final int y;
+        public final float chance;
+        public Color drawColor = LINE_BLACK;
+        public final String displayString;
+        public Collection<String> infoLines;
+
+        public ChanceInfoNode(int x, int y, PositionedMutationNodeStack nodeStack) {
+            this.x = x;
+            this.y = y;
+            this.chance = nodeStack.baseChance;
+
+            if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+                this.drawColor = LINE_RED;
+                this.infoLines = nodeStack.requirements;
+            } else {
+                this.infoLines = Collections.emptyList();
+            }
+
+            if (chance < 1) {
+                this.displayString = EnumChatFormatting.BOLD + "<1%";
+            } else {
+                this.displayString = EnumChatFormatting.BOLD.toString() + ((int) chance) + "%";
+            }
+
+        }
+
+        public boolean containsPoint(int x, int y) {
+            return x >= this.x && x <= this.x + 16 && y >= this.y + 1 && y <= this.y + 6;
+        }
+
+        public void renderNode() {
+            GL11.glPushMatrix();
+            GL11.glTranslatef(this.x + 8, this.y + 1, 0);
+            GL11.glScalef(0.65F, 0.65F, 0.65F);
+            GuiDraw.drawStringC(this.displayString, 0, 0, drawColor.getRGB(), false);
+            GL11.glPopMatrix();
+        }
+    }
+
     // RENDERING BB
     // X = 15 to 135 (Size: 120)
     // Y = 10 to 100 (Size: 90)
@@ -30,12 +131,18 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int MIN_X = 15, MAX_X = 135;
     private static final int X_SEPERATION_THRESHOLD = 7;
     private static final int Y_OFFSET = 0;
+    private static final Color LINE_BLACK = new Color(0, 0, 0);
+    private static final Color LINE_RED = new Color(169, 0, 10);
+
+    private static final int OFFSET_CORRECTION = 8;
+    private static final int POSSIBLE_CHILD_OFFSET = 16;
 
     private final SimpleBinaryTree<IAllele> mutationTree;
     private final List<PositionedMutationNodeStack> evaluatedBeePositions;
     private int evaluatedMaxX;
     public final boolean oversized;
     private PositionedMutationNodeStack rootStack;
+    private List<IMutationNode> mutationNodesToRender = new LinkedList<>();
 
     public CachedBeeMutationTree(IBeeMutation parentMutation) {
         // parentMutation.getTemplate() Gets results primary at array[0], secondary at array[1]
@@ -122,6 +229,76 @@ public class CachedBeeMutationTree extends CachedRecipe {
             leftChild,
             rightChild,
             true);
+
+        generateMutationNodes(rootStack);
+    }
+
+    private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
+        int nodeX = nodeStack.relx;
+        int nodeY = nodeStack.rely;
+
+        if (nodeStack.leftChild == null || nodeStack.rightChild == null) {
+            if (nodeStack.hasPossibleChildren) {
+                Color drawColor = LINE_BLACK;
+
+                if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+                    drawColor = LINE_RED;
+                }
+
+                if (nodeStack.baseChance > 0) {
+                    this.mutationNodesToRender.add(new ChanceInfoNode(nodeX, nodeY + 16, nodeStack));
+                }
+
+                this.mutationNodesToRender.add(
+                    new LineNode(
+                        nodeX + OFFSET_CORRECTION,
+                        nodeY + OFFSET_CORRECTION,
+                        nodeX + OFFSET_CORRECTION - 4,
+                        nodeY + OFFSET_CORRECTION + POSSIBLE_CHILD_OFFSET,
+                        drawColor));
+
+                this.mutationNodesToRender.add(
+                    new LineNode(
+                        nodeX + OFFSET_CORRECTION,
+                        nodeY + OFFSET_CORRECTION,
+                        nodeX + OFFSET_CORRECTION + 4,
+                        nodeY + OFFSET_CORRECTION + POSSIBLE_CHILD_OFFSET,
+                        drawColor));
+            }
+        } else {
+            PositionedMutationNodeStack left = nodeStack.leftChild;
+            PositionedMutationNodeStack right = nodeStack.rightChild;
+
+            Color drawColor = LINE_BLACK;
+
+            if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
+                drawColor = LINE_RED;
+            }
+
+            if (nodeStack.baseChance > 0) {
+                this.mutationNodesToRender.add(new ChanceInfoNode(nodeX, nodeY + 16, nodeStack));
+            }
+
+            this.mutationNodesToRender.add(
+                new LineNode(
+                    nodeX + OFFSET_CORRECTION,
+                    nodeY + OFFSET_CORRECTION,
+                    left.relx + OFFSET_CORRECTION,
+                    left.rely + OFFSET_CORRECTION,
+                    drawColor));
+
+            this.mutationNodesToRender.add(
+                new LineNode(
+                    nodeX + OFFSET_CORRECTION,
+                    nodeY + OFFSET_CORRECTION,
+                    right.relx + OFFSET_CORRECTION,
+                    right.rely + OFFSET_CORRECTION,
+                    drawColor));
+
+            generateMutationNodes(left);
+            generateMutationNodes(right);
+        }
+
     }
 
     private void removeAndReplaceDuplicates(SimpleBinaryTree.Node<IAllele> node, List<IAllele> discoveredMutations) { // Replace
@@ -227,6 +404,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
     public PositionedMutationNodeStack getRootStack() {
         return rootStack;
+    }
+
+    public List<IMutationNode> getMutationNodesToRender() {
+        return mutationNodesToRender;
     }
 
     @Override
