@@ -4,7 +4,7 @@ import com.gtnewhorizon.gtnhlib.color.ColorResource;
 
 public class ColorUtils {
 
-    private static final ColorResource.Factory color = new ColorResource.Factory("neiaddons");
+    private static final ColorResource.Factory color = new ColorResource.Factory("beebetteratbees");
 
     public static final ColorResource
     // spotless:off
