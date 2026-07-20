@@ -20,6 +20,7 @@ import codechicken.nei.PositionedStack;
 import forestry.api.apiculture.IBeeMutation;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleSpecies;
+import hellfirepvp.beebetteratbees.client.util.ColorUtils;
 import hellfirepvp.beebetteratbees.client.util.SimpleBinaryTree;
 import hellfirepvp.beebetteratbees.common.ModConfig;
 
@@ -87,7 +88,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
         public final int x;
         public final int y;
         public final float chance;
-        public Color drawColor = LINE_BLACK;
+        public Color drawColor = LABEL_BLACK;
         public final String displayString;
         public Collection<String> infoLines;
 
@@ -97,7 +98,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.chance = nodeStack.baseChance;
 
             if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
-                this.drawColor = LINE_RED;
+                this.drawColor = LABEL_RED;
                 this.infoLines = nodeStack.requirements;
             } else {
                 this.infoLines = Collections.emptyList();
@@ -131,8 +132,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int MIN_X = 15, MAX_X = 135;
     private static final int X_SEPERATION_THRESHOLD = 7;
     private static final int Y_OFFSET = 0;
-    private static final Color LINE_BLACK = new Color(0, 0, 0);
-    private static final Color LINE_RED = new Color(169, 0, 10);
+    private static final Color LINE_BLACK = new Color(ColorUtils.neiLineBlack.getColor(), true);
+    private static final Color LINE_RED = new Color(ColorUtils.neiLineRed.getColor(), true);
+    private static final Color LABEL_BLACK = new Color(ColorUtils.neiLineLabelBlack.getColor(), true);
+    private static final Color LABEL_RED = new Color(ColorUtils.neiLineLabelRed.getColor(), true);
 
     private static final int OFFSET_CORRECTION = 8;
     private static final int POSSIBLE_CHILD_OFFSET = 16;
