@@ -140,7 +140,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int Y_OFFSET = 0;
     private static final Color LINE_BLACK = new Color(ColorUtils.neiLineBlack.getColor(), true);
     private static final Color LINE_RED = new Color(ColorUtils.neiLineRed.getColor(), true);
-    private static final Color LINE_GREEN = new Color(0x00FF00);
+    private static final Color LINE_GREEN = new Color(ColorUtils.neiLineGreen.getColor());
     private static final Color LABEL_BLACK = new Color(ColorUtils.neiLineLabelBlack.getColor(), true);
     private static final Color LABEL_RED = new Color(ColorUtils.neiLineLabelRed.getColor(), true);
 
