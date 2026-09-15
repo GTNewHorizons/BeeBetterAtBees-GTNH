@@ -3,9 +3,11 @@ package hellfirepvp.beebetteratbees.client.gui;
 import static hellfirepvp.beebetteratbees.client.gui.BBABGuiRecipeTreeHandler.*;
 
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +22,10 @@ import codechicken.nei.PositionedStack;
 import forestry.api.apiculture.IBeeMutation;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleSpecies;
+import hellfirepvp.beebetteratbees.client.requirements.BlockRequirement;
+import hellfirepvp.beebetteratbees.client.requirements.RequirementLayout;
+import hellfirepvp.beebetteratbees.client.requirements.RequirementResolvers;
+import hellfirepvp.beebetteratbees.client.requirements.RequirementSlot;
 import hellfirepvp.beebetteratbees.client.util.ColorUtils;
 import hellfirepvp.beebetteratbees.client.util.SimpleBinaryTree;
 import hellfirepvp.beebetteratbees.common.ModConfig;
@@ -32,14 +38,14 @@ import hellfirepvp.beebetteratbees.common.ModConfig;
  */
 public class CachedBeeMutationTree extends CachedRecipe {
 
-    protected static interface IMutationNode {
+    public interface IMutationNode {
 
         boolean containsPoint(int x, int y);
 
         void renderNode();
     }
 
-    protected static class LineNode implements IMutationNode {
+    public static class LineNode implements IMutationNode {
 
         public final double lx;
         public final double ly;
@@ -83,7 +89,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
         }
     }
 
-    protected static class ChanceInfoNode implements IMutationNode {
+    public static class ChanceInfoNode implements IMutationNode {
 
         public final int x;
         public final int y;
@@ -129,16 +135,20 @@ public class CachedBeeMutationTree extends CachedRecipe {
     // X = 15 to 135 (Size: 120)
     // Y = 10 to 100 (Size: 90)
 
-    private static final int MIN_X = 15, MAX_X = 135;
+    private static final int MIN_X = 2, MAX_X = 162;
     private static final int X_SEPERATION_THRESHOLD = 7;
     private static final int Y_OFFSET = 0;
     private static final Color LINE_BLACK = new Color(ColorUtils.neiLineBlack.getColor(), true);
     private static final Color LINE_RED = new Color(ColorUtils.neiLineRed.getColor(), true);
+    private static final Color LINE_GREEN = new Color(0x00FF00);
     private static final Color LABEL_BLACK = new Color(ColorUtils.neiLineLabelBlack.getColor(), true);
     private static final Color LABEL_RED = new Color(ColorUtils.neiLineLabelRed.getColor(), true);
 
     private static final int OFFSET_CORRECTION = 8;
     private static final int POSSIBLE_CHILD_OFFSET = 16;
+    private static final int BEE_SLOT_SIZE = 18;
+    private static final int LEVEL_STEP = 50;
+    private static final int MAX_RECIPE_HEIGHT = 220;
 
     private final SimpleBinaryTree<IAllele> mutationTree;
     private final List<PositionedMutationNodeStack> evaluatedBeePositions;
@@ -146,6 +156,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
     public final boolean oversized;
     private PositionedMutationNodeStack rootStack;
     private List<IMutationNode> mutationNodesToRender = new LinkedList<>();
+    private final List<RequirementSlot> requirementSlots = new ArrayList<>();
+    private final List<LineNode> requirementLines = new ArrayList<>();
 
     public CachedBeeMutationTree(IBeeMutation parentMutation) {
         // parentMutation.getTemplate() Gets results primary at array[0], secondary at array[1]
@@ -184,7 +196,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
             oversized = false;
             return; // In case the root is a leaf, there is nothing to display anyway except the root.
         }
-        int yStep = 110 / maxTotalDepth;
+        int yStep = LEVEL_STEP;
 
         this.oversized = checkSeparationWidth(maxTotalDepth, X_SEPERATION_THRESHOLD);
         this.evaluatedMaxX = MAX_X;
@@ -225,7 +237,9 @@ public class CachedBeeMutationTree extends CachedRecipe {
                 (IAlleleSpecies) mutationTree.getRoot()
                     .getValue(),
                 BEE_TYPE_PRINCESS),
-            (MIN_X + this.evaluatedMaxX) / 2,
+            (IAlleleSpecies) mutationTree.getRoot()
+                .getValue(),
+            (MIN_X + this.evaluatedMaxX) / 2 - OFFSET_CORRECTION,
             Y_OFFSET,
             ch,
             requirements,
@@ -234,6 +248,43 @@ public class CachedBeeMutationTree extends CachedRecipe {
             true);
 
         generateMutationNodes(rootStack);
+        buildRequirementSlots();
+    }
+
+    private void buildRequirementSlots() {
+        List<Rectangle> occupied = new ArrayList<>();
+        addOccupied(rootStack, occupied);
+        for (PositionedMutationNodeStack stack : evaluatedBeePositions) addOccupied(stack, occupied);
+        addRequirements(rootStack, occupied);
+        List<PositionedMutationNodeStack> orderedStacks = new ArrayList<>(evaluatedBeePositions);
+        orderedStacks.sort(
+            Comparator.comparingInt((PositionedMutationNodeStack stack) -> stack.rely)
+                .thenComparingInt(stack -> stack.relx));
+        for (PositionedMutationNodeStack stack : orderedStacks) {
+            addRequirements(stack, occupied);
+        }
+    }
+
+    private void addOccupied(PositionedMutationNodeStack stack, List<Rectangle> occupied) {
+        if (stack != null) occupied.add(new Rectangle(stack.relx, stack.rely, BEE_SLOT_SIZE, BEE_SLOT_SIZE));
+    }
+
+    private void addRequirements(PositionedMutationNodeStack stack, List<Rectangle> occupied) {
+        if (stack == null || stack.species == null) return;
+        List<IBeeMutation> mutations = getMutationsWithResult(stack.species);
+        if (mutations.isEmpty()) return;
+        List<BlockRequirement> requirements = RequirementResolvers.resolve(mutations.get(0), stack.species);
+        List<RequirementSlot> placed = RequirementLayout.place(requirements, stack.relx, stack.rely, occupied);
+        requirementSlots.addAll(placed);
+        for (RequirementSlot slot : placed) {
+            requirementLines.add(
+                new LineNode(
+                    stack.relx + OFFSET_CORRECTION,
+                    stack.rely + OFFSET_CORRECTION,
+                    slot.relx + OFFSET_CORRECTION,
+                    slot.rely + OFFSET_CORRECTION,
+                    LINE_GREEN));
+        }
     }
 
     private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
@@ -322,8 +373,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
     }
 
     private boolean checkSeparationWidth(int maxTotalDepth, int xSeparationThreshold) {
-        double maxDivision = Math.pow(2, maxTotalDepth + 1);
-        int resultingLLWidth = (int) (120 / maxDivision); // LowestLevelWidth
+        int leafCount = 1 << maxTotalDepth;
+        int resultingLLWidth = (MAX_X - MIN_X) / leafCount;
         return resultingLLWidth < xSeparationThreshold;
     }
 
@@ -346,7 +397,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
             }
             PositionedMutationNodeStack leaf = new PositionedMutationNodeStack( // Leaf
                 createStack((IAlleleSpecies) node.getValue(), BEE_TYPE_DRONE),
-                center,
+                (IAlleleSpecies) node.getValue(),
+                center - OFFSET_CORRECTION,
                 minY,
                 ch,
                 requirements,
@@ -372,7 +424,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         PositionedMutationNodeStack outNode = new PositionedMutationNodeStack(
             createStack((IAlleleSpecies) node.getValue(), BEE_TYPE_DRONE),
-            center,
+            (IAlleleSpecies) node.getValue(),
+            center - OFFSET_CORRECTION,
             minY,
             ch,
             requirements,
@@ -413,9 +466,26 @@ public class CachedBeeMutationTree extends CachedRecipe {
         return mutationNodesToRender;
     }
 
+    public List<LineNode> getRequirementLines() {
+        return requirementLines;
+    }
+
+    public List<RequirementSlot> getRequirementSlots() {
+        return requirementSlots;
+    }
+
+    public int getRecipeHeight() {
+        int maxY = MAX_RECIPE_HEIGHT;
+        for (RequirementSlot slot : requirementSlots) maxY = Math.max(maxY, slot.rely + BEE_SLOT_SIZE + 4);
+        for (PositionedMutationNodeStack stack : evaluatedBeePositions) maxY = Math.max(maxY, stack.rely + 24);
+        return maxY;
+    }
+
     @Override
     public List<PositionedStack> getIngredients() {
-        return new ArrayList<>(evaluatedBeePositions);
+        List<PositionedStack> result = new ArrayList<>(evaluatedBeePositions);
+        result.addAll(requirementSlots);
+        return result;
     }
 
     public static class PositionedMutationNodeStack extends PositionedStack {
@@ -423,10 +493,11 @@ public class CachedBeeMutationTree extends CachedRecipe {
         public final boolean hasPossibleChildren;
         public final float baseChance;
         public final Collection<String> requirements;
+        public final IAlleleSpecies species;
         public final PositionedMutationNodeStack leftChild, rightChild;
 
-        public PositionedMutationNodeStack(Object object, int x, int y, boolean genPerms, float baseChance,
-            Collection<String> requirementInfo, PositionedMutationNodeStack leftChild,
+        public PositionedMutationNodeStack(Object object, IAlleleSpecies species, int x, int y, boolean genPerms,
+            float baseChance, Collection<String> requirementInfo, PositionedMutationNodeStack leftChild,
             PositionedMutationNodeStack rightChild, boolean hasPossibleChildren) {
             super(object, x, y, genPerms);
             this.leftChild = leftChild;
@@ -434,9 +505,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.hasPossibleChildren = hasPossibleChildren;
             this.baseChance = baseChance;
             this.requirements = requirementInfo;
+            this.species = species;
         }
 
-        public PositionedMutationNodeStack(Object object, int x, int y, float baseChance,
+        public PositionedMutationNodeStack(Object object, IAlleleSpecies species, int x, int y, float baseChance,
             Collection<String> requirementInfo, PositionedMutationNodeStack leftChild,
             PositionedMutationNodeStack rightChild, boolean hasPossibleChildren) {
             super(object, x, y);
@@ -445,6 +517,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.hasPossibleChildren = hasPossibleChildren;
             this.baseChance = baseChance;
             this.requirements = requirementInfo;
+            this.species = species;
         }
 
     }

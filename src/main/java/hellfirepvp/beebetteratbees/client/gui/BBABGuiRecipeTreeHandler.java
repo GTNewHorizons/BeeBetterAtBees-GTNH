@@ -20,6 +20,7 @@ import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.ISpeciesRoot;
 import hellfirepvp.beebetteratbees.client.gui.CachedBeeMutationTree.ChanceInfoNode;
 import hellfirepvp.beebetteratbees.client.gui.CachedBeeMutationTree.IMutationNode;
+import hellfirepvp.beebetteratbees.client.gui.CachedBeeMutationTree.LineNode;
 import hellfirepvp.beebetteratbees.common.BeeBetterAtBees;
 import hellfirepvp.beebetteratbees.common.ModConfig;
 
@@ -65,9 +66,20 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     public void loadCraftingRecipes(String outputId, Object... results) {
         if (speciesRoot == null) return;
 
-        if (outputId.equals("item")) {
+        if (outputId.equals("all")) {
+            loadAllRecipes();
+        } else if (outputId.equals("item")) {
             loadCraftingRecipes((ItemStack) results[0]);
         }
+    }
+
+    private void loadAllRecipes() {
+        for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
+            if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
+                this.arecipes.add(new CachedBeeMutationTree(mutation));
+            }
+        }
+        cleanupDuplicateRecipes();
     }
 
     public void loadCraftingRecipes(ItemStack result) {
@@ -108,6 +120,8 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         if (rec instanceof CachedBeeMutationTree cachedTree) {
             cachedTree.getMutationNodesToRender()
                 .forEach(node -> node.renderNode());
+            cachedTree.getRequirementLines()
+                .forEach(LineNode::renderNode);
         }
     }
 
@@ -131,10 +145,18 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     @Override
+    public int getRecipeHeight(int recipe) {
+        CachedRecipe cached = this.arecipes.get(recipe);
+        return cached instanceof CachedBeeMutationTree ? ((CachedBeeMutationTree) cached).getRecipeHeight() : 65;
+    }
+
+    @Override
     public void loadUsageRecipes(String inputId, Object... ingredients) {
         if (speciesRoot == null) return;
 
-        if (inputId.equals("item")) {
+        if (inputId.equals("all")) {
+            loadAllRecipes();
+        } else if (inputId.equals("item")) {
             loadUsageRecipes((ItemStack) ingredients[0]);
         }
     }
@@ -142,32 +164,33 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     public void loadUsageRecipes(ItemStack ingredient) {
         if (speciesRoot == null) return;
 
-        if (!speciesRoot.isMember(ingredient)) {
-            return;
+        if (speciesRoot.isMember(ingredient)) {
+            IIndividual individual = speciesRoot.getMember(ingredient);
+            if (individual != null && individual.getGenome() != null
+                && individual.getGenome()
+                    .getPrimary() != null) {
+                IAlleleSpecies species = individual.getGenome()
+                    .getPrimary();
+                for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
+                    if ((mutation.getAllele0()
+                        .equals(species)
+                        || mutation.getAllele1()
+                            .equals(species))
+                        && (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes)) {
+                        this.arecipes.add(new CachedBeeMutationTree(mutation));
+                    }
+                }
+            }
         }
-        IIndividual individual = speciesRoot.getMember(ingredient);
-        if (individual == null) {
-            BeeBetterAtBees.log.warn("IIndividual is null searching recipe for %s", ingredient.toString());
-            return;
-        }
-        if (individual.getGenome() == null) {
-            BeeBetterAtBees.log.warn("Genome is null when searching recipe for %s", ingredient.toString());
-            return;
-        }
-        if (individual.getGenome()
-            .getPrimary() == null) {
-            BeeBetterAtBees.log.warn("Species is null when searching recipe for %s", ingredient.toString());
-            return;
-        }
-        IAlleleSpecies species = individual.getGenome()
-            .getPrimary();
+
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
-            if (mutation.getAllele0()
-                .equals(species)
-                || mutation.getAllele1()
-                    .equals(species)) {
-                if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
-                    this.arecipes.add(new CachedBeeMutationTree(mutation));
+            if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
+                CachedBeeMutationTree recipe = new CachedBeeMutationTree(mutation);
+                boolean matchesRequirement = recipe.getRequirementSlots()
+                    .stream()
+                    .anyMatch(slot -> slot.containsWithNBT(ingredient));
+                if (matchesRequirement && !this.arecipes.contains(recipe)) {
+                    this.arecipes.add(recipe);
                 }
             }
         }
