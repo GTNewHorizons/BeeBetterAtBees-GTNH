@@ -135,7 +135,6 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int Y_OFFSET = 0;
     private static final Color LINE_BLACK = new Color(ColorUtils.neiLineBlack.getColor(), true);
     private static final Color LINE_RED = new Color(ColorUtils.neiLineRed.getColor(), true);
-    private static final Color LINE_GREEN = new Color(ColorUtils.neiLineGreen.getColor());
     private static final Color LABEL_BLACK = new Color(ColorUtils.neiLineLabelBlack.getColor(), true);
     private static final Color LABEL_RED = new Color(ColorUtils.neiLineLabelRed.getColor(), true);
 
@@ -251,11 +250,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
     }
 
     private List<BlockRequirement> resolveRequirements(IAllele species) {
-        List<BlockRequirement> result = new ArrayList<>();
-        for (IBeeMutation mutation : getMutationsWithResult(species)) {
-            result.addAll(RequirementResolvers.resolve(mutation));
-        }
-        return result;
+        List<IBeeMutation> mutations = getMutationsWithResult(species);
+        return mutations.isEmpty() ? Collections.emptyList() : RequirementResolvers.resolve(mutations.get(0));
     }
 
     private static Collection<String> getSpecialConditions(IBeeMutation mutation) {
@@ -265,12 +261,6 @@ public class CachedBeeMutationTree extends CachedRecipe {
         } catch (Throwable ignored) {
             return Collections.emptyList();
         }
-    }
-
-    private static Collection<String> getSpecialConditions(List<IBeeMutation> mutations) {
-        List<String> result = new ArrayList<>();
-        for (IBeeMutation mutation : mutations) result.addAll(getSpecialConditions(mutation));
-        return result;
     }
 
     private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
@@ -375,7 +365,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
             if (!mutationsToRoot.isEmpty()) {
                 ch = mutationsToRoot.get(0)
                     .getBaseChance();
-                requirements = getSpecialConditions(mutationsToRoot);
+                requirements = getSpecialConditions(mutationsToRoot.get(0));
             }
             PositionedMutationNodeStack leaf = new PositionedMutationNodeStack( // Leaf
                 createStack((IAlleleSpecies) node.getValue(), BEE_TYPE_DRONE),
@@ -397,7 +387,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
         if (!mutations.isEmpty()) {
             ch = mutations.get(0)
                 .getBaseChance();
-            requirements = getSpecialConditions(mutations);
+            requirements = getSpecialConditions(mutations.get(0));
         }
 
         PositionedMutationNodeStack outNode = new PositionedMutationNodeStack(
