@@ -10,8 +10,7 @@ public class RequirementLayout {
     public static final int SLOT_PITCH = 20;
     public static final int SLOT_GAP = 6;
     public static final int GUI_WIDTH = 166;
-    public static final int GUI_HEIGHT = 220;
-    public static final int MIN_RECIPE_HEIGHT = GUI_HEIGHT;
+    public static final int MIN_RECIPE_HEIGHT = 65;
 
     public static List<RequirementSlot> place(List<BlockRequirement> requirements, int beeX, int beeY) {
         List<BlockRequirement> groups = new ArrayList<>();
@@ -26,7 +25,7 @@ public class RequirementLayout {
 
     private static List<RequirementSlot> placeRow(List<BlockRequirement> groups, int x, int y) {
         int width = SLOT_SIZE + (groups.size() - 1) * SLOT_PITCH;
-        if (x < 0 || y < 0 || x + width > GUI_WIDTH || y + SLOT_SIZE > GUI_HEIGHT) {
+        if (x < 0 || y < 0 || x + width > GUI_WIDTH) {
             return Collections.emptyList();
         }
         List<RequirementSlot> result = new ArrayList<>();
