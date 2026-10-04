@@ -8,7 +8,6 @@ import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
-import forestry.api.genetics.IAlleleSpecies;
 import forestry.api.genetics.IMutationCondition;
 import forestry.core.genetics.mutations.Mutation;
 import forestry.core.genetics.mutations.MutationConditionRequiresResource;
@@ -17,10 +16,11 @@ import forestry.core.genetics.mutations.MutationConditionRequiresResourceOreDict
 public class MutationConditionRequirementProvider implements IBlockRequirementProvider {
 
     @Override
-    public List<BlockRequirement> getRequirements(Object subject, IAlleleSpecies species) {
+    public List<BlockRequirement> getRequirements(Object subject) {
         if (!(subject instanceof Mutation)) return Collections.emptyList();
         List<BlockRequirement> result = new ArrayList<>();
         for (IMutationCondition condition : ((Mutation) subject).getMutationConditions()) {
+            if (condition == null) continue;
             List<ItemStack> candidates = candidates(condition);
             if (!candidates.isEmpty()) result.add(new BlockRequirement(candidates, "bbab.requirement.blocks"));
         }
@@ -30,6 +30,7 @@ public class MutationConditionRequirementProvider implements IBlockRequirementPr
     private List<ItemStack> candidates(IMutationCondition condition) {
         if (condition instanceof MutationConditionRequiresResource) {
             ItemStack required = ((MutationConditionRequiresResource) condition).getBlockRequired();
+            if (required == null || required.getItem() == null) return Collections.emptyList();
             return RequirementStacks.fromBlock(Block.getBlockFromItem(required.getItem()), required.getItemDamage());
         }
         if (!(condition instanceof MutationConditionRequiresResourceOreDict)) return Collections.emptyList();

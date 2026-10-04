@@ -3,7 +3,6 @@ package hellfirepvp.beebetteratbees.client.gui;
 import static hellfirepvp.beebetteratbees.client.gui.BBABGuiRecipeTreeHandler.*;
 
 import java.awt.Color;
-import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -131,10 +130,6 @@ public class CachedBeeMutationTree extends CachedRecipe {
         }
     }
 
-    // RENDERING BB
-    // X = 15 to 135 (Size: 120)
-    // Y = 10 to 100 (Size: 90)
-
     private static final int MIN_X = 2, MAX_X = 162;
     private static final int X_SEPERATION_THRESHOLD = 7;
     private static final int Y_OFFSET = 0;
@@ -146,9 +141,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
     private static final int OFFSET_CORRECTION = 8;
     private static final int POSSIBLE_CHILD_OFFSET = 16;
-    private static final int BEE_SLOT_SIZE = 18;
     private static final int LEVEL_STEP = 50;
-    private static final int MAX_RECIPE_HEIGHT = 220;
 
     private final SimpleBinaryTree<IAllele> mutationTree;
     private final List<PositionedMutationNodeStack> evaluatedBeePositions;
@@ -157,7 +150,6 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private PositionedMutationNodeStack rootStack;
     private List<IMutationNode> mutationNodesToRender = new LinkedList<>();
     private final List<RequirementSlot> requirementSlots = new ArrayList<>();
-    private final List<LineNode> requirementLines = new ArrayList<>();
 
     public CachedBeeMutationTree(IBeeMutation parentMutation) {
         // parentMutation.getTemplate() Gets results primary at array[0], secondary at array[1]
@@ -219,18 +211,8 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.evaluatedMaxX,
             iterationDepth - 1);
 
-        List<IBeeMutation> mutationsToRoot = getMutationsWithResult(
-            mutationTree.getRoot()
-                .getValue());
-        float ch = -1;
-        Collection<String> requirements = new LinkedList<>();
-        if (!mutationsToRoot.isEmpty()) {
-            IBeeMutation mut = mutationsToRoot.get(0);
-            ch = mut.getBaseChance();
-            try {
-                requirements = mut.getSpecialConditions();
-            } catch (Throwable ignored) {}
-        }
+        float ch = parentMutation.getBaseChance();
+        Collection<String> requirements = getSpecialConditions(parentMutation);
 
         this.rootStack = new PositionedMutationNodeStack(
             createStack(
@@ -248,43 +230,47 @@ public class CachedBeeMutationTree extends CachedRecipe {
             true);
 
         generateMutationNodes(rootStack);
-        buildRequirementSlots();
+        buildRequirementSlots(parentMutation);
     }
 
-    private void buildRequirementSlots() {
-        List<Rectangle> occupied = new ArrayList<>();
-        addOccupied(rootStack, occupied);
-        for (PositionedMutationNodeStack stack : evaluatedBeePositions) addOccupied(stack, occupied);
-        addRequirements(rootStack, occupied);
+    private void buildRequirementSlots(IBeeMutation parentMutation) {
+        addRequirements(rootStack, RequirementResolvers.resolve(parentMutation));
         List<PositionedMutationNodeStack> orderedStacks = new ArrayList<>(evaluatedBeePositions);
         orderedStacks.sort(
             Comparator.comparingInt((PositionedMutationNodeStack stack) -> stack.rely)
                 .thenComparingInt(stack -> stack.relx));
         for (PositionedMutationNodeStack stack : orderedStacks) {
-            addRequirements(stack, occupied);
+            addRequirements(stack, resolveRequirements(stack.species));
         }
     }
 
-    private void addOccupied(PositionedMutationNodeStack stack, List<Rectangle> occupied) {
-        if (stack != null) occupied.add(new Rectangle(stack.relx, stack.rely, BEE_SLOT_SIZE, BEE_SLOT_SIZE));
-    }
-
-    private void addRequirements(PositionedMutationNodeStack stack, List<Rectangle> occupied) {
-        if (stack == null || stack.species == null) return;
-        List<IBeeMutation> mutations = getMutationsWithResult(stack.species);
-        if (mutations.isEmpty()) return;
-        List<BlockRequirement> requirements = RequirementResolvers.resolve(mutations.get(0), stack.species);
-        List<RequirementSlot> placed = RequirementLayout.place(requirements, stack.relx, stack.rely, occupied);
+    private void addRequirements(PositionedMutationNodeStack stack, List<BlockRequirement> requirements) {
+        if (stack == null || requirements.isEmpty()) return;
+        List<RequirementSlot> placed = RequirementLayout.place(requirements, stack.relx, stack.rely);
         requirementSlots.addAll(placed);
-        for (RequirementSlot slot : placed) {
-            requirementLines.add(
-                new LineNode(
-                    stack.relx + OFFSET_CORRECTION,
-                    stack.rely + OFFSET_CORRECTION,
-                    slot.relx + OFFSET_CORRECTION,
-                    slot.rely + OFFSET_CORRECTION,
-                    LINE_GREEN));
+    }
+
+    private List<BlockRequirement> resolveRequirements(IAllele species) {
+        List<BlockRequirement> result = new ArrayList<>();
+        for (IBeeMutation mutation : getMutationsWithResult(species)) {
+            result.addAll(RequirementResolvers.resolve(mutation));
         }
+        return result;
+    }
+
+    private static Collection<String> getSpecialConditions(IBeeMutation mutation) {
+        try {
+            Collection<String> conditions = mutation.getSpecialConditions();
+            return conditions == null ? Collections.<String>emptyList() : conditions;
+        } catch (Throwable ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    private static Collection<String> getSpecialConditions(List<IBeeMutation> mutations) {
+        List<String> result = new ArrayList<>();
+        for (IBeeMutation mutation : mutations) result.addAll(getSpecialConditions(mutation));
+        return result;
     }
 
     private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
@@ -385,15 +371,11 @@ public class CachedBeeMutationTree extends CachedRecipe {
         if (iterationMaxCount < 0 || node.getMaxFollowingDepth() <= 0) {
             List<IBeeMutation> mutationsToRoot = getMutationsWithResult(node.getValue());
             float ch = -1;
-            Collection<String> requirements = new LinkedList<>();
+            Collection<String> requirements = Collections.emptyList();
             if (!mutationsToRoot.isEmpty()) {
-                IBeeMutation mut = mutationsToRoot.get(0);
-                ch = mut.getBaseChance();
-                try {
-                    requirements = mut.getSpecialConditions();
-                } catch (Throwable tr) {
-                    requirements = new LinkedList<>();
-                }
+                ch = mutationsToRoot.get(0)
+                    .getBaseChance();
+                requirements = getSpecialConditions(mutationsToRoot);
             }
             PositionedMutationNodeStack leaf = new PositionedMutationNodeStack( // Leaf
                 createStack((IAlleleSpecies) node.getValue(), BEE_TYPE_DRONE),
@@ -411,15 +393,11 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         List<IBeeMutation> mutations = getMutationsWithResult(node.getValue());
         float ch = -1;
-        Collection<String> requirements = new LinkedList<>();
+        Collection<String> requirements = Collections.emptyList();
         if (!mutations.isEmpty()) {
-            IBeeMutation mut = mutations.get(0);
-            ch = mut.getBaseChance();
-            try {
-                requirements = mut.getSpecialConditions();
-            } catch (Throwable tr) {
-                requirements = new LinkedList<>();
-            }
+            ch = mutations.get(0)
+                .getBaseChance();
+            requirements = getSpecialConditions(mutations);
         }
 
         PositionedMutationNodeStack outNode = new PositionedMutationNodeStack(
@@ -466,17 +444,15 @@ public class CachedBeeMutationTree extends CachedRecipe {
         return mutationNodesToRender;
     }
 
-    public List<LineNode> getRequirementLines() {
-        return requirementLines;
-    }
-
     public List<RequirementSlot> getRequirementSlots() {
         return requirementSlots;
     }
 
     public int getRecipeHeight() {
-        int maxY = MAX_RECIPE_HEIGHT;
-        for (RequirementSlot slot : requirementSlots) maxY = Math.max(maxY, slot.rely + BEE_SLOT_SIZE + 4);
+        int maxY = RequirementLayout.MIN_RECIPE_HEIGHT;
+        for (RequirementSlot slot : requirementSlots) {
+            maxY = Math.max(maxY, slot.rely + RequirementLayout.SLOT_SIZE + 4);
+        }
         for (PositionedMutationNodeStack stack : evaluatedBeePositions) maxY = Math.max(maxY, stack.rely + 24);
         return maxY;
     }
