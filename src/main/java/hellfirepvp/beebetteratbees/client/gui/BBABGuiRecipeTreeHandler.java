@@ -1,12 +1,20 @@
 package hellfirepvp.beebetteratbees.client.gui;
 
 import java.awt.Point;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 
 import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.guihook.GuiContainerManager;
@@ -36,6 +44,18 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     public static final int BEE_TYPE_DRONE = 0;
 
     private static IBeeRoot speciesRoot;
+
+    private CachedBeeMutationTree draggedTree;
+    private int dragButton = -1;
+    private int lastMouseX;
+    private int lastMouseY;
+    private int activeViewportClips;
+
+    // Viewport dimensions for the graph area
+    private static final int VIEWPORT_X = 15;
+    private static final int VIEWPORT_Y = 0;
+    private static final int VIEWPORT_WIDTH = 120;
+    private static final int VIEWPORT_HEIGHT = 100;
 
     public static List<IBeeMutation> getMutationsWithResult(IAllele allele) {
         if (speciesRoot == null) return new LinkedList<>();
@@ -115,12 +135,122 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     }
 
     @Override
+    public void drawBackground(int recipe) {
+        super.drawBackground(recipe);
+        pushViewportClip();
+    }
+
+    @Override
+    public void drawForeground(int recipe) {
+        try {
+            super.drawForeground(recipe);
+        } finally {
+            popViewportClip();
+        }
+    }
+
+    @Override
     public void drawExtras(int recipe) {
         CachedRecipe rec = this.arecipes.get(recipe);
-        if (rec instanceof CachedBeeMutationTree cachedTree) {
-            cachedTree.getMutationNodesToRender()
-                .forEach(node -> node.renderNode());
+        if (!(rec instanceof CachedBeeMutationTree cachedTree)) return;
+
+        cachedTree.getMutationNodesToRender()
+            .forEach(node -> node.renderNode(cachedTree.getGraphState()));
+    }
+
+    private void pushViewportClip() {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        ScaledResolution resolution = new ScaledResolution(minecraft, minecraft.displayWidth, minecraft.displayHeight);
+        int scaleFactor = resolution.getScaleFactor();
+
+        FloatBuffer matrix = BufferUtils.createFloatBuffer(16);
+        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, matrix);
+        float scaleX = matrix.get(0);
+        float scaleY = matrix.get(5);
+        float translateX = matrix.get(12);
+        float translateY = matrix.get(13);
+        int left = (int) Math.floor((VIEWPORT_X * scaleX + translateX) * scaleFactor);
+        int right = (int) Math.ceil(((VIEWPORT_X + VIEWPORT_WIDTH) * scaleX + translateX) * scaleFactor);
+        int top = (int) Math.floor((VIEWPORT_Y * scaleY + translateY) * scaleFactor);
+        int bottom = (int) Math.ceil(((VIEWPORT_Y + VIEWPORT_HEIGHT) * scaleY + translateY) * scaleFactor);
+        int clipX = left;
+        int clipY = minecraft.displayHeight - bottom;
+        int clipWidth = right - left;
+        int clipHeight = bottom - top;
+        boolean scissorEnabled = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        IntBuffer currentScissor = BufferUtils.createIntBuffer(4);
+        GL11.glGetInteger(GL11.GL_SCISSOR_BOX, currentScissor);
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_SCISSOR_BIT);
+        activeViewportClips++;
+        // snipsnip
+        if (scissorEnabled) {
+            int currentX = currentScissor.get(0);
+            int currentY = currentScissor.get(1);
+            int currentRight = currentX + currentScissor.get(2);
+            int currentTop = currentY + currentScissor.get(3);
+            int intersectRight = Math.min(clipX + clipWidth, currentRight);
+            int intersectTop = Math.min(clipY + clipHeight, currentTop);
+            clipX = Math.max(clipX, currentX);
+            clipY = Math.max(clipY, currentY);
+            clipWidth = Math.max(0, intersectRight - clipX);
+            clipHeight = Math.max(0, intersectTop - clipY);
         }
+
+        GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        GL11.glScissor(clipX, clipY, clipWidth, clipHeight);
+    }
+
+    private void popViewportClip() {
+        if (activeViewportClips <= 0) return;
+        activeViewportClips--;
+        GL11.glPopAttrib();
+    }
+
+    @Override
+    public boolean mouseClicked(GuiRecipe<?> gui, int button, int recipe) {
+        Point mousePos = GuiDraw.getMousePosition();
+        Point localPos = getLocalRecipePosition(gui, recipe, mousePos);
+        if ((button == 0 || button == 2) && isInsideViewport(localPos)
+            && this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree) {
+            draggedTree = cachedTree;
+            dragButton = button;
+            lastMouseX = mousePos.x;
+            lastMouseY = mousePos.y;
+            return true;
+        }
+
+        return super.mouseClicked(gui, button, recipe);
+    }
+
+    @Override
+    public boolean mouseScrolled(GuiRecipe<?> gui, int scroll, int recipe) {
+        if (scroll == 0) return false;
+
+        Point localPos = getLocalRecipePosition(gui, recipe, GuiDraw.getMousePosition());
+        if (isInsideViewport(localPos) && this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree) {
+            cachedTree.zoomViewport(localPos.x, localPos.y, scroll);
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        if (draggedTree == null) {
+            return;
+        }
+        if (!(Minecraft.getMinecraft().currentScreen instanceof GuiRecipe<?>) || !Mouse.isButtonDown(dragButton)) {
+            draggedTree = null;
+            dragButton = -1;
+            return;
+        }
+
+        Point mousePos = GuiDraw.getMousePosition();
+        draggedTree.panViewport(mousePos.x - lastMouseX, mousePos.y - lastMouseY);
+        lastMouseX = mousePos.x;
+        lastMouseY = mousePos.y;
     }
 
     @Override
@@ -130,18 +260,31 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         }
         if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
             Point pos = GuiDraw.getMousePosition();
-            Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
-            Point recipeOffset = gui.getRecipePosition(recipe);
-            int relativeX = pos.x - guiOffset.x - recipeOffset.x;
-            int relativeY = pos.y - guiOffset.y - recipeOffset.y;
-            for (IMutationNode mutation : cachedTree.getMutationNodesToRender()) {
-                if (mutation instanceof ChanceInfoNode chanceInfoNode
-                    && chanceInfoNode.containsPoint(relativeX, relativeY)) {
-                    return new LinkedList<>(chanceInfoNode.infoLines);
+            Point localPos = getLocalRecipePosition(gui, recipe, pos);
+
+            if (isInsideViewport(localPos)) {
+                for (IMutationNode mutation : cachedTree.getMutationNodesToRender()) {
+                    if (mutation instanceof ChanceInfoNode chanceInfoNode
+                        && chanceInfoNode.containsPoint(localPos.x, localPos.y, cachedTree.getGraphState())) {
+                        return new LinkedList<>(chanceInfoNode.infoLines);
+                    }
                 }
             }
         }
         return super.handleTooltip(gui, currenttip, recipe);
+    }
+
+    private Point getLocalRecipePosition(GuiRecipe<?> gui, int recipe, Point screenPosition) {
+        Point recipeOffset = gui.getRecipePosition(recipe);
+        return new Point(
+            screenPosition.x - gui.guiLeft - recipeOffset.x,
+            screenPosition.y - gui.guiTop - recipeOffset.y);
+    }
+
+    private boolean isInsideViewport(Point point) {
+        return point.x >= VIEWPORT_X && point.x < VIEWPORT_X + VIEWPORT_WIDTH
+            && point.y >= VIEWPORT_Y
+            && point.y < VIEWPORT_Y + VIEWPORT_HEIGHT;
     }
 
     @Override

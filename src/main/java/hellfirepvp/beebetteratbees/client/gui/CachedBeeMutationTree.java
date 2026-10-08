@@ -9,9 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.EnumChatFormatting;
 
 import org.lwjgl.opengl.GL11;
@@ -21,6 +19,7 @@ import codechicken.nei.PositionedStack;
 import forestry.api.apiculture.IBeeMutation;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleSpecies;
+import hellfirepvp.beebetteratbees.client.gui.graph.GraphInteractionState;
 import hellfirepvp.beebetteratbees.client.requirements.BlockRequirement;
 import hellfirepvp.beebetteratbees.client.requirements.RequirementLayout;
 import hellfirepvp.beebetteratbees.client.requirements.RequirementResolvers;
@@ -39,9 +38,9 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
     public interface IMutationNode {
 
-        boolean containsPoint(int x, int y);
+        boolean containsPoint(int x, int y, GraphInteractionState state);
 
-        void renderNode();
+        void renderNode(GraphInteractionState state);
     }
 
     public static class LineNode implements IMutationNode {
@@ -60,31 +59,31 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.color = color;
         }
 
-        public boolean containsPoint(int x, int y) {
+        public boolean containsPoint(int x, int y, GraphInteractionState state) {
             return false;
         }
 
-        public void renderNode() {
-            GL11.glPushMatrix();
+        @Override
+        public void renderNode(GraphInteractionState state) {
+            if (state == null) return;
+
+            GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT | GL11.GL_LINE_BIT);
             GL11.glDisable(GL11.GL_TEXTURE_2D);
             GL11.glLineWidth(3.0F);
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(color.getRed() / 255.0F, color.getGreen() / 255.0F, color.getBlue() / 255.0F, 0.5F);
 
-            Tessellator tes = Tessellator.instance;
-            tes.startDrawing(GL11.GL_LINE_STRIP);
-            tes.setColorRGBA(color.getRed(), color.getGreen(), color.getBlue(), 127);
-            tes.addVertex(lx, ly, 0);
-            tes.addVertex(hx, hy, 0);
-            tes.draw();
+            float[] start = state.worldToScreen((float) lx, (float) ly);
+            float[] end = state.worldToScreen((float) hx, (float) hy);
 
-            GL11.glDisable(GL11.GL_LINE_SMOOTH);
-            GL11.glLineWidth(2.0F);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glDisable(GL11.GL_BLEND);
-            GL11.glPopMatrix();
+            GL11.glBegin(GL11.GL_LINES);
+            GL11.glVertex3f(start[0], start[1], 0);
+            GL11.glVertex3f(end[0], end[1], 0);
+            GL11.glEnd();
+            GL11.glPopAttrib();
         }
     }
 
@@ -93,9 +92,20 @@ public class CachedBeeMutationTree extends CachedRecipe {
         public final int x;
         public final int y;
         public final float chance;
-        public Color drawColor = LABEL_BLACK;
+        public Color drawColor = LINE_BLACK;
         public final String displayString;
         public Collection<String> infoLines;
+
+        @Override
+        public void renderNode(GraphInteractionState state) {
+            if (state == null) return;
+            float[] drawPosition = state.worldToScreen(this.x + 8, this.y + 1);
+            GL11.glPushMatrix();
+            GL11.glTranslatef(drawPosition[0], drawPosition[1], 0);
+            GL11.glScalef(0.65F, 0.65F, 0.65F);
+            GuiDraw.drawStringC(this.displayString, 0, 0, drawColor.getRGB(), false);
+            GL11.glPopMatrix();
+        }
 
         public ChanceInfoNode(int x, int y, PositionedMutationNodeStack nodeStack) {
             this.x = x;
@@ -103,7 +113,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.chance = nodeStack.baseChance;
 
             if (nodeStack.requirements != null && !nodeStack.requirements.isEmpty()) {
-                this.drawColor = LABEL_RED;
+                this.drawColor = LINE_RED;
                 this.infoLines = nodeStack.requirements;
             } else {
                 this.infoLines = Collections.emptyList();
@@ -117,16 +127,11 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         }
 
-        public boolean containsPoint(int x, int y) {
-            return x >= this.x && x <= this.x + 16 && y >= this.y + 1 && y <= this.y + 6;
-        }
-
-        public void renderNode() {
-            GL11.glPushMatrix();
-            GL11.glTranslatef(this.x + 8, this.y + 1, 0);
-            GL11.glScalef(0.65F, 0.65F, 0.65F);
-            GuiDraw.drawStringC(this.displayString, 0, 0, drawColor.getRGB(), false);
-            GL11.glPopMatrix();
+        public boolean containsPoint(int x, int y, GraphInteractionState state) {
+            float[] drawPosition = state.worldToScreen(this.x + 8, this.y + 1);
+            float drawX = drawPosition[0] - 8;
+            float drawY = drawPosition[1];
+            return x >= drawX && x <= drawX + 16 && y >= drawY && y <= drawY + 5;
         }
     }
 
@@ -135,20 +140,90 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private static final int Y_OFFSET = 0;
     private static final Color LINE_BLACK = new Color(ColorUtils.neiLineBlack.getColor(), true);
     private static final Color LINE_RED = new Color(ColorUtils.neiLineRed.getColor(), true);
-    private static final Color LABEL_BLACK = new Color(ColorUtils.neiLineLabelBlack.getColor(), true);
-    private static final Color LABEL_RED = new Color(ColorUtils.neiLineLabelRed.getColor(), true);
 
     private static final int OFFSET_CORRECTION = 8;
     private static final int POSSIBLE_CHILD_OFFSET = 16;
     private static final int LEVEL_STEP = 50;
 
+    // for scissors
+    private static final int VIEW_X1 = 15;
+    private static final int VIEW_Y1 = 0;
+    private static final int VIEW_X2 = 135;
+    private static final int VIEW_Y2 = 100;
+
     private final SimpleBinaryTree<IAllele> mutationTree;
+    private final int treeId;
+    private static int GLOBAL_ID = 0;
+    private final GraphInteractionState graphState = new GraphInteractionState();
     private final List<PositionedMutationNodeStack> evaluatedBeePositions;
     private int evaluatedMaxX;
     public final boolean oversized;
     private PositionedMutationNodeStack rootStack;
     private List<IMutationNode> mutationNodesToRender = new LinkedList<>();
     private final List<RequirementSlot> requirementSlots = new ArrayList<>();
+    private final List<float[]> requirementSlotWorldPositions = new ArrayList<>();
+
+    public void updateViewport() {
+        if (rootStack == null) return;
+        updateStackPosition(rootStack);
+
+        for (PositionedMutationNodeStack stack : evaluatedBeePositions) {
+            updateStackPosition(stack);
+        }
+        for (int i = 0; i < requirementSlots.size(); i++) {
+            float[] world = requirementSlotWorldPositions.get(i);
+            float[] screen = graphState.worldToScreen(world[0], world[1]);
+            requirementSlots.get(i).relx = Math.round(screen[0]);
+            requirementSlots.get(i).rely = Math.round(screen[1]);
+        }
+    }
+
+    private void updateStackPosition(PositionedMutationNodeStack stack) {
+        float[] screenPosition = graphState.worldToScreen(stack.worldX + 8, stack.worldY + 8);
+        stack.relx = Math.round(screenPosition[0] - 8);
+        stack.rely = Math.round(screenPosition[1] - 8);
+    }
+
+    public void panViewport(float deltaX, float deltaY) {
+        graphState.pan(deltaX, deltaY);
+        clampViewport();
+        updateViewport();
+    }
+
+    public void zoomViewport(int cursorX, int cursorY, int scroll) {
+        float[] worldPosition = graphState.screenToWorld(cursorX, cursorY);
+        float oldZoom = graphState.getZoomLevel();
+        graphState.zoom(scroll > 0 ? 1 : -1);
+        if (oldZoom == graphState.getZoomLevel()) return;
+        graphState.setPan(
+            cursorX - worldPosition[0] * graphState.getZoomLevel(),
+            cursorY - worldPosition[1] * graphState.getZoomLevel());
+        clampViewport();
+        updateViewport();
+    }
+
+    private void clampViewport() {
+        if (rootStack == null) return;
+        int minContentX = rootStack.worldX;
+        int maxContentX = rootStack.worldX + 16;
+        int minContentY = rootStack.worldY;
+        int maxContentY = rootStack.worldY + 32;
+
+        for (PositionedMutationNodeStack stack : evaluatedBeePositions) {
+            minContentX = Math.min(minContentX, stack.worldX);
+            maxContentX = Math.max(maxContentX, stack.worldX + 16);
+            minContentY = Math.min(minContentY, stack.worldY);
+            maxContentY = Math.max(maxContentY, stack.worldY + 32);
+        }
+        float zoom = graphState.getZoomLevel();
+        float minPanX = VIEW_X1 - maxContentX * zoom;
+        float maxPanX = VIEW_X2 - minContentX * zoom;
+        float minPanY = VIEW_Y1 - maxContentY * zoom;
+        float maxPanY = VIEW_Y2 - minContentY * zoom;
+        float panX = Math.max(minPanX, Math.min(maxPanX, graphState.getPanX()));
+        float panY = Math.max(minPanY, Math.min(maxPanY, graphState.getPanY()));
+        graphState.setPan(panX, panY);
+    }
 
     public CachedBeeMutationTree(IBeeMutation parentMutation) {
         // parentMutation.getTemplate() Gets results primary at array[0], secondary at array[1]
@@ -170,6 +245,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
                     }
                 }
             });
+        this.treeId = GLOBAL_ID++;
 
         if (!ModConfig.showDuplicateTrees) {
             List<IAllele> foundMutationTrees = new ArrayList<>();
@@ -178,7 +254,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         // Important: We don't need to buffer root, because that's the "result"
         this.evaluatedBeePositions = new LinkedList<>();
-        int iterationDepth = 3;
+        this.mutationNodesToRender = new LinkedList<>();
+        // get max amount
+        int iterationDepth = mutationTree.getRoot()
+            .getMaxFollowingDepth();
         int maxTotalDepth = Math.min(
             iterationDepth,
             mutationTree.getRoot()
@@ -230,6 +309,7 @@ public class CachedBeeMutationTree extends CachedRecipe {
 
         generateMutationNodes(rootStack);
         buildRequirementSlots(parentMutation);
+        frameInitialGeneration();
     }
 
     private void buildRequirementSlots(IBeeMutation parentMutation) {
@@ -246,6 +326,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
     private void addRequirements(PositionedMutationNodeStack stack, List<BlockRequirement> requirements) {
         if (stack == null || requirements.isEmpty()) return;
         List<RequirementSlot> placed = RequirementLayout.place(requirements, stack.relx, stack.rely);
+        for (RequirementSlot slot : placed) {
+            // still world coords at this point, updateViewport moves them with the bees later
+            requirementSlotWorldPositions.add(new float[] { slot.relx, slot.rely });
+        }
         requirementSlots.addAll(placed);
     }
 
@@ -263,11 +347,54 @@ public class CachedBeeMutationTree extends CachedRecipe {
         }
     }
 
-    private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
-        int nodeX = nodeStack.relx;
-        int nodeY = nodeStack.rely;
+    private void frameInitialGeneration() {
+        if (rootStack == null) return;
 
-        if (nodeStack.leftChild == null || nodeStack.rightChild == null) {
+        List<PositionedMutationNodeStack> initialGeneration = new ArrayList<>();
+        initialGeneration.add(rootStack);
+        if (rootStack.leftChild != null) initialGeneration.add(rootStack.leftChild);
+        if (rootStack.rightChild != null) initialGeneration.add(rootStack.rightChild);
+
+        float minCenterX = Float.MAX_VALUE;
+        float maxCenterX = -Float.MAX_VALUE;
+        float minCenterY = Float.MAX_VALUE;
+        float maxCenterY = -Float.MAX_VALUE;
+
+        for (PositionedMutationNodeStack stack : initialGeneration) {
+            float centerX = stack.worldX + 8;
+            float centerY = stack.worldY + 8;
+            minCenterX = Math.min(minCenterX, centerX);
+            maxCenterX = Math.max(maxCenterX, centerX);
+            minCenterY = Math.min(minCenterY, centerY);
+            maxCenterY = Math.max(maxCenterY, centerY);
+        }
+
+        float availableWidth = VIEW_X2 - VIEW_X1 - 16;
+        float availableHeight = VIEW_Y2 - VIEW_Y1 - 16;
+        float width = maxCenterX - minCenterX;
+        float height = maxCenterY - minCenterY;
+        float zoom = 1.0F;
+
+        if (width > 0) zoom = Math.min(zoom, availableWidth / width);
+        if (height > 0) zoom = Math.min(zoom, availableHeight / height);
+
+        graphState.setZoomLevel(zoom);
+
+        float contentCenterX = (minCenterX + maxCenterX) / 2.0F;
+        float contentCenterY = (minCenterY + maxCenterY) / 2.0F;
+        float viewportCenterX = (VIEW_X1 + VIEW_X2) / 2.0F;
+        float viewportCenterY = (VIEW_Y1 + VIEW_Y2) / 2.0F;
+        graphState.setPan(
+            viewportCenterX - contentCenterX * graphState.getZoomLevel(),
+            viewportCenterY - contentCenterY * graphState.getZoomLevel());
+        updateViewport();
+    }
+
+    private void generateMutationNodes(PositionedMutationNodeStack nodeStack) {
+        int nodeX = nodeStack.getX();
+        int nodeY = nodeStack.getY();
+
+        if (nodeStack.leftChild == null && nodeStack.rightChild == null) {
             if (nodeStack.hasPossibleChildren) {
                 Color drawColor = LINE_BLACK;
 
@@ -411,14 +538,13 @@ public class CachedBeeMutationTree extends CachedRecipe {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CachedBeeMutationTree that = (CachedBeeMutationTree) o;
-        return Objects.equals(mutationTree, that.mutationTree);
+        if (!(o instanceof CachedBeeMutationTree)) return false;
+        return this.treeId == ((CachedBeeMutationTree) o).treeId;
     }
 
     @Override
     public int hashCode() {
-        return mutationTree != null ? mutationTree.hashCode() : 0;
+        return treeId;
     }
 
     @Override
@@ -447,6 +573,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
         return maxY;
     }
 
+    public GraphInteractionState getGraphState() {
+        return graphState;
+    }
+
     @Override
     public List<PositionedStack> getIngredients() {
         List<PositionedStack> result = new ArrayList<>(evaluatedBeePositions);
@@ -455,6 +585,9 @@ public class CachedBeeMutationTree extends CachedRecipe {
     }
 
     public static class PositionedMutationNodeStack extends PositionedStack {
+
+        public final int worldX;
+        public final int worldY;
 
         public final boolean hasPossibleChildren;
         public final float baseChance;
@@ -466,6 +599,10 @@ public class CachedBeeMutationTree extends CachedRecipe {
             float baseChance, Collection<String> requirementInfo, PositionedMutationNodeStack leftChild,
             PositionedMutationNodeStack rightChild, boolean hasPossibleChildren) {
             super(object, x, y, genPerms);
+
+            this.worldX = x;
+            this.worldY = y;
+
             this.leftChild = leftChild;
             this.rightChild = rightChild;
             this.hasPossibleChildren = hasPossibleChildren;
@@ -477,7 +614,12 @@ public class CachedBeeMutationTree extends CachedRecipe {
         public PositionedMutationNodeStack(Object object, IAlleleSpecies species, int x, int y, float baseChance,
             Collection<String> requirementInfo, PositionedMutationNodeStack leftChild,
             PositionedMutationNodeStack rightChild, boolean hasPossibleChildren) {
+
             super(object, x, y);
+
+            this.worldX = x;
+            this.worldY = y;
+
             this.leftChild = leftChild;
             this.rightChild = rightChild;
             this.hasPossibleChildren = hasPossibleChildren;
@@ -486,6 +628,13 @@ public class CachedBeeMutationTree extends CachedRecipe {
             this.species = species;
         }
 
+        public int getX() {
+            return this.worldX;
+        }
+
+        public int getY() {
+            return this.worldY;
+        }
     }
 
 }
