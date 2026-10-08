@@ -38,6 +38,8 @@ import codechicken.nei.recipe.RecipeInfo;
  * on BeeBetterAtBees
  * AbstractTreeGUIHandler
  */
+
+// tree view controls: wheel = zoom, left/middle drag = pan
 public abstract class AbstractTreeGUIHandler implements ICraftingHandler, IUsageHandler {
 
     public int cycleticks = Math.abs((int) System.currentTimeMillis());
