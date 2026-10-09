@@ -20,6 +20,7 @@ import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.ISpeciesRoot;
 import hellfirepvp.beebetteratbees.client.gui.CachedBeeMutationTree.ChanceInfoNode;
 import hellfirepvp.beebetteratbees.client.gui.CachedBeeMutationTree.IMutationNode;
+import hellfirepvp.beebetteratbees.client.requirements.RequirementResolvers;
 import hellfirepvp.beebetteratbees.common.BeeBetterAtBees;
 import hellfirepvp.beebetteratbees.common.ModConfig;
 
@@ -65,9 +66,20 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     public void loadCraftingRecipes(String outputId, Object... results) {
         if (speciesRoot == null) return;
 
-        if (outputId.equals("item")) {
+        if (outputId.equals("all")) {
+            loadAllRecipes();
+        } else if (outputId.equals("item")) {
             loadCraftingRecipes((ItemStack) results[0]);
         }
+    }
+
+    private void loadAllRecipes() {
+        for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
+            if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
+                this.arecipes.add(new CachedBeeMutationTree(mutation));
+            }
+        }
+        cleanupDuplicateRecipes();
     }
 
     public void loadCraftingRecipes(ItemStack result) {
@@ -113,28 +125,37 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
-        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()
-            && this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree) {
+        if (!(this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree)) {
+            return super.handleTooltip(gui, currenttip, recipe);
+        }
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
             Point recipeOffset = gui.getRecipePosition(recipe);
-
+            int relativeX = pos.x - guiOffset.x - recipeOffset.x;
+            int relativeY = pos.y - guiOffset.y - recipeOffset.y;
             for (IMutationNode mutation : cachedTree.getMutationNodesToRender()) {
-                if (mutation instanceof ChanceInfoNode chanceInfoNode && chanceInfoNode
-                    .containsPoint(pos.x - guiOffset.x - recipeOffset.x, pos.y - guiOffset.y - recipeOffset.y)) {
+                if (mutation instanceof ChanceInfoNode chanceInfoNode
+                    && chanceInfoNode.containsPoint(relativeX, relativeY)) {
                     return new LinkedList<>(chanceInfoNode.infoLines);
                 }
             }
-
         }
         return super.handleTooltip(gui, currenttip, recipe);
+    }
+
+    @Override
+    public int getRecipeHeight(int recipe) {
+        return ((CachedBeeMutationTree) this.arecipes.get(recipe)).getRecipeHeight();
     }
 
     @Override
     public void loadUsageRecipes(String inputId, Object... ingredients) {
         if (speciesRoot == null) return;
 
-        if (inputId.equals("item")) {
+        if (inputId.equals("all")) {
+            loadAllRecipes();
+        } else if (inputId.equals("item")) {
             loadUsageRecipes((ItemStack) ingredients[0]);
         }
     }
@@ -142,33 +163,25 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
     public void loadUsageRecipes(ItemStack ingredient) {
         if (speciesRoot == null) return;
 
-        if (!speciesRoot.isMember(ingredient)) {
-            return;
+        IAlleleSpecies species = null;
+        if (speciesRoot.isMember(ingredient)) {
+            IIndividual individual = speciesRoot.getMember(ingredient);
+            if (individual != null && individual.getGenome() != null
+                && individual.getGenome()
+                    .getPrimary() != null) {
+                species = individual.getGenome()
+                    .getPrimary();
+            }
         }
-        IIndividual individual = speciesRoot.getMember(ingredient);
-        if (individual == null) {
-            BeeBetterAtBees.log.warn("IIndividual is null searching recipe for %s", ingredient.toString());
-            return;
-        }
-        if (individual.getGenome() == null) {
-            BeeBetterAtBees.log.warn("Genome is null when searching recipe for %s", ingredient.toString());
-            return;
-        }
-        if (individual.getGenome()
-            .getPrimary() == null) {
-            BeeBetterAtBees.log.warn("Species is null when searching recipe for %s", ingredient.toString());
-            return;
-        }
-        IAlleleSpecies species = individual.getGenome()
-            .getPrimary();
+
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
-            if (mutation.getAllele0()
+            if (mutation.isSecret() && !ModConfig.shouldShowSecretRecipes) continue;
+            boolean matchesSpecies = species != null && (mutation.getAllele0()
                 .equals(species)
                 || mutation.getAllele1()
-                    .equals(species)) {
-                if (!mutation.isSecret() || ModConfig.shouldShowSecretRecipes) {
-                    this.arecipes.add(new CachedBeeMutationTree(mutation));
-                }
+                    .equals(species));
+            if (matchesSpecies || RequirementResolvers.matches(mutation, ingredient)) {
+                this.arecipes.add(new CachedBeeMutationTree(mutation));
             }
         }
         cleanupDuplicateRecipes();
