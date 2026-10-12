@@ -125,10 +125,8 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
 
     @Override
     public List<String> handleTooltip(GuiRecipe<?> gui, List<String> currenttip, int recipe) {
-        if (!(this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree)) {
-            return super.handleTooltip(gui, currenttip, recipe);
-        }
-        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()) {
+        if (GuiContainerManager.shouldShowTooltip(gui) && currenttip.isEmpty()
+            && this.arecipes.get(recipe) instanceof CachedBeeMutationTree cachedTree) {
             Point pos = GuiDraw.getMousePosition();
             Point guiOffset = new Point(gui.guiLeft, gui.guiTop);
             Point recipeOffset = gui.getRecipePosition(recipe);
@@ -166,12 +164,8 @@ public class BBABGuiRecipeTreeHandler extends AbstractTreeGUIHandler {
         IAlleleSpecies species = null;
         if (speciesRoot.isMember(ingredient)) {
             IIndividual individual = speciesRoot.getMember(ingredient);
-            if (individual != null && individual.getGenome() != null
-                && individual.getGenome()
-                    .getPrimary() != null) {
-                species = individual.getGenome()
-                    .getPrimary();
-            }
+            var genome = individual == null ? null : individual.getGenome();
+            if (genome != null) species = genome.getPrimary();
         }
 
         for (IBeeMutation mutation : speciesRoot.getMutations(false)) {
