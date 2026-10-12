@@ -4,6 +4,8 @@ import codechicken.nei.api.API;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import hellfirepvp.beebetteratbees.client.gui.BBABGuiRecipeTreeHandler;
+import hellfirepvp.beebetteratbees.client.requirements.MutationConditionRequirementProvider;
+import hellfirepvp.beebetteratbees.client.requirements.RequirementResolvers;
 import hellfirepvp.beebetteratbees.common.CommonProxy;
 
 /**
@@ -21,6 +23,7 @@ public class ClientProxy extends CommonProxy {
 
     @SideOnly(Side.CLIENT)
     private void registerNEIStuff() {
+        RequirementResolvers.register(new MutationConditionRequirementProvider());
         BBABGuiRecipeTreeHandler handler = new BBABGuiRecipeTreeHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
